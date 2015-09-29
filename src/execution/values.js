@@ -127,7 +127,7 @@ function coerceValue(type: GraphQLInputType, value: any): any {
     return coerceValue(nullableType, value);
   }
 
-  if (isNullish(value)) {
+  if (value === undefined) {
     return null;
   }
 
@@ -145,10 +145,10 @@ function coerceValue(type: GraphQLInputType, value: any): any {
     return Object.keys(fields).reduce((obj, fieldName) => {
       var field = fields[fieldName];
       var fieldValue = coerceValue(field.type, value[fieldName]);
-      if (isNullish(fieldValue)) {
+      if (fieldValue === undefined) {
         fieldValue = field.defaultValue;
       }
-      if (!isNullish(fieldValue)) {
+      if (fieldValue !== undefined) {
         obj[fieldName] = fieldValue;
       }
       return obj;
