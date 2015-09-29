@@ -1,5 +1,5 @@
 {
-  "name": "graphql",
+  "name": "graphql-nullable",
   "version": "0.4.5",
   "description": "A Query Language and Runtime which can target any service.",
   "contributors": [
