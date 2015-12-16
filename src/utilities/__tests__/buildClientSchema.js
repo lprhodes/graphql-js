@@ -28,6 +28,7 @@ import {
   GraphQLBoolean,
   GraphQLID,
 } from '../../';
+import { GraphQLDirective } from '../../type/directives';
 
 
 // Test property:
@@ -62,7 +63,7 @@ describe('Type System: build schema from introspection', () => {
     await testSchema(schema);
   });
 
-  it('builds a simple schema with a mutation type', async () => {
+  it('builds a simple schema with both operation types', async () => {
     var queryType = new GraphQLObjectType({
       name: 'QueryType',
       description: 'This is a simple query type',
@@ -88,9 +89,21 @@ describe('Type System: build schema from introspection', () => {
       }
     });
 
+    var subscriptionType = new GraphQLObjectType({
+      name: 'SubscriptionType',
+      description: 'This is a simple subscription type',
+      fields: {
+        string: {
+          type: GraphQLString,
+          description: 'This is a string field'
+        }
+      }
+    });
+
     var schema = new GraphQLSchema({
       query: queryType,
-      mutation: mutationType
+      mutation: mutationType,
+      subscription: subscriptionType
     });
 
     await testSchema(schema);
@@ -358,21 +371,26 @@ describe('Type System: build schema from introspection', () => {
     // Client types do not get server-only values, so `value` mirrors `name`,
     // rather than using the integers defined in the "server" schema.
     expect(clientFoodEnum.getValues()).to.deep.equal([
-      { description: 'Foods that are vegetables.',
-        name: 'VEGETABLES',
-        value: 'VEGETABLES' },
-      { description: 'Foods that are fruits.',
-        name: 'FRUITS',
-        value: 'FRUITS' },
-      { description: 'Foods that are oils.',
-        name: 'OILS',
-        value: 'OILS' },
-      { description: 'Foods that are dairy.',
-        name: 'DAIRY',
-        value: 'DAIRY' },
-      { description: 'Foods that are meat.',
-        name: 'MEAT',
-        value: 'MEAT' },
+      { name: 'VEGETABLES',
+        value: 'VEGETABLES',
+        description: 'Foods that are vegetables.',
+        deprecationReason: null, },
+      { name: 'FRUITS',
+        value: 'FRUITS',
+        description: 'Foods that are fruits.',
+        deprecationReason: null, },
+      { name: 'OILS',
+        value: 'OILS',
+        description: 'Foods that are oils.',
+        deprecationReason: null, },
+      { name: 'DAIRY',
+        value: 'DAIRY',
+        description: 'Foods that are dairy.',
+        deprecationReason: null, },
+      { name: 'MEAT',
+        value: 'MEAT',
+        description: 'Foods that are meat.',
+        deprecationReason: null, },
     ]);
   });
 
@@ -457,6 +475,69 @@ describe('Type System: build schema from introspection', () => {
                 defaultValue: { lat: 37.485, lon: -122.148 }
               }
             }
+          }
+        }
+      })
+    });
+
+    await testSchema(schema);
+  });
+
+  it('builds a schema with custom directives', async () => {
+
+    var schema = new GraphQLSchema({
+      query: new GraphQLObjectType({
+        name: 'Simple',
+        description: 'This is a simple type',
+        fields: {
+          string: {
+            type: GraphQLString,
+            description: 'This is a string field'
+          }
+        }
+      }),
+      directives: [
+        new GraphQLDirective({
+          name: 'customDirective',
+          description: 'This is a custom directive',
+          onField: true,
+        })
+      ]
+    });
+
+    await testSchema(schema);
+  });
+
+
+  it('builds a schema aware of deprecation', async () => {
+
+    var schema = new GraphQLSchema({
+      query: new GraphQLObjectType({
+        name: 'Simple',
+        description: 'This is a simple type',
+        fields: {
+          shinyString: {
+            type: GraphQLString,
+            description: 'This is a shiny string field'
+          },
+          deprecatedString: {
+            type: GraphQLString,
+            description: 'This is a deprecated string field',
+            deprecationReason: 'Use shinyString',
+          },
+          color: {
+            type: new GraphQLEnumType({
+              name: 'Color',
+              values: {
+                RED: { description: 'So rosy' },
+                GREEN: { description: 'So grassy' },
+                BLUE: { description: 'So calming' },
+                MAUVE: {
+                  description: 'So sickening',
+                  deprecationReason: 'No longer in fashion'
+                },
+              }
+            })
           }
         }
       })

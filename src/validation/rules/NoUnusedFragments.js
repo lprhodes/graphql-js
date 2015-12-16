@@ -8,6 +8,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
 
+import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
 
 
@@ -21,50 +22,37 @@ export function unusedFragMessage(fragName: any): string {
  * A GraphQL document is only valid if all fragment definitions are spread
  * within operations, or spread within other fragments spread within operations.
  */
-export function NoUnusedFragments(): any {
+export function NoUnusedFragments(context: ValidationContext): any {
+  var operationDefs = [];
   var fragmentDefs = [];
-  var spreadsWithinOperation = [];
-  var fragAdjacencies = {};
-  var spreadNames = {};
 
   return {
-    OperationDefinition() {
-      spreadNames = {};
-      spreadsWithinOperation.push(spreadNames);
+    OperationDefinition(node) {
+      operationDefs.push(node);
+      return false;
     },
-    FragmentDefinition(def) {
-      fragmentDefs.push(def);
-      spreadNames = {};
-      fragAdjacencies[def.name.value] = spreadNames;
-    },
-    FragmentSpread(spread) {
-      spreadNames[spread.name.value] = true;
+    FragmentDefinition(node) {
+      fragmentDefs.push(node);
+      return false;
     },
     Document: {
       leave() {
-        var fragmentNameUsed = {};
-        var reduceSpreadFragments = function (spreads) {
-          var keys = Object.keys(spreads);
-          keys.forEach(fragName => {
-            if (fragmentNameUsed[fragName] !== true) {
-              fragmentNameUsed[fragName] = true;
-              var adjacencies = fragAdjacencies[fragName];
-              if (adjacencies) {
-                reduceSpreadFragments(adjacencies);
-              }
-            }
-          });
-        };
-        spreadsWithinOperation.forEach(reduceSpreadFragments);
-        var errors = fragmentDefs
-          .filter(def => fragmentNameUsed[def.name.value] !== true)
-          .map(def => new GraphQLError(
-            unusedFragMessage(def.name.value),
-            [ def ]
-          ));
-        if (errors.length > 0) {
-          return errors;
-        }
+        const fragmentNameUsed = Object.create(null);
+        operationDefs.forEach(operation => {
+          context.getRecursivelyReferencedFragments(operation).forEach(
+            fragment => { fragmentNameUsed[fragment.name.value] = true; }
+          );
+        });
+
+        fragmentDefs.forEach(fragmentDef => {
+          const fragName = fragmentDef.name.value;
+          if (fragmentNameUsed[fragName] !== true) {
+            context.reportError(new GraphQLError(
+              unusedFragMessage(fragName),
+              [ fragmentDef ]
+            ));
+          }
+        });
       }
     }
   };

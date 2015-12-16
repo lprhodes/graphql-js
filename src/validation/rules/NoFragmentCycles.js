@@ -10,9 +10,7 @@
 
 import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
-import type { SelectionSet, FragmentSpread } from '../../language/ast';
-import { FRAGMENT_DEFINITION } from '../../language/kinds';
-import { visit } from '../../language/visitor';
+import type { FragmentDefinition } from '../../language/ast';
 
 
 export function cycleErrorMessage(
@@ -24,78 +22,66 @@ export function cycleErrorMessage(
 }
 
 export function NoFragmentCycles(context: ValidationContext): any {
+  // Tracks already visited fragments to maintain O(N) and to ensure that cycles
+  // are not redundantly reported.
+  var visitedFrags = Object.create(null);
 
-  // Gather all the fragment spreads ASTs for each fragment definition.
-  // Importantly this does not include inline fragments.
-  var definitions = context.getDocument().definitions;
-  var spreadsInFragment = definitions.reduce((map, node) => {
-    if (node.kind === FRAGMENT_DEFINITION) {
-      map[node.name.value] = gatherSpreads(node);
-    }
-    return map;
-  }, {});
+  // Array of AST nodes used to produce meaningful errors
+  var spreadPath = [];
 
-  // Tracks spreads known to lead to cycles to ensure that cycles are not
-  // redundantly reported.
-  var knownToLeadToCycle = new Set();
+  // Position in the spread path
+  var spreadPathIndexByName = Object.create(null);
 
   return {
+    OperationDefinition: () => false,
     FragmentDefinition(node) {
-      var errors = [];
-      var initialName = node.name.value;
-
-      // Array of AST nodes used to produce meaningful errors
-      var spreadPath = [];
-
-      // This does a straight-forward DFS to find cycles.
-      // It does not terminate when a cycle was found but continues to explore
-      // the graph to find all possible cycles.
-      function detectCycleRecursive(fragmentName) {
-        var spreadNodes = spreadsInFragment[fragmentName];
-        for (var i = 0; i < spreadNodes.length; ++i) {
-          var spreadNode = spreadNodes[i];
-          if (knownToLeadToCycle.has(spreadNode)) {
-            continue;
-          }
-          if (spreadNode.name.value === initialName) {
-            var cyclePath = spreadPath.concat(spreadNode);
-            cyclePath.forEach(spread => knownToLeadToCycle.add(spread));
-            errors.push(new GraphQLError(
-              cycleErrorMessage(initialName, spreadPath.map(s => s.name.value)),
-              cyclePath
-            ));
-            continue;
-          }
-          if (spreadPath.some(spread => spread === spreadNode)) {
-            continue;
-          }
-
-          spreadPath.push(spreadNode);
-          detectCycleRecursive(spreadNode.name.value);
-          spreadPath.pop();
-        }
+      if (!visitedFrags[node.name.value]) {
+        detectCycleRecursive(node);
       }
-
-      detectCycleRecursive(initialName);
-
-      if (errors.length > 0) {
-        return errors;
-      }
+      return false;
     },
   };
-}
 
-/**
- * Given an operation or fragment AST node, gather all the
- * named spreads defined within the scope of the fragment
- * or operation
- */
-function gatherSpreads(node: SelectionSet): Array<FragmentSpread> {
-  var spreadNodes = [];
-  visit(node, {
-    FragmentSpread(spread) {
-      spreadNodes.push(spread);
+  // This does a straight-forward DFS to find cycles.
+  // It does not terminate when a cycle was found but continues to explore
+  // the graph to find all possible cycles.
+  function detectCycleRecursive(fragment: FragmentDefinition) {
+    const fragmentName = fragment.name.value;
+    visitedFrags[fragmentName] = true;
+
+    const spreadNodes = context.getFragmentSpreads(fragment);
+    if (spreadNodes.length === 0) {
+      return;
     }
-  });
-  return spreadNodes;
+
+    spreadPathIndexByName[fragmentName] = spreadPath.length;
+
+    for (let i = 0; i < spreadNodes.length; i++) {
+      const spreadNode = spreadNodes[i];
+      const spreadName = spreadNode.name.value;
+      const cycleIndex = spreadPathIndexByName[spreadName];
+
+      if (cycleIndex === undefined) {
+        spreadPath.push(spreadNode);
+        if (!visitedFrags[spreadName]) {
+          const spreadFragment = context.getFragment(spreadName);
+          if (spreadFragment) {
+            detectCycleRecursive(spreadFragment);
+          }
+        }
+        spreadPath.pop();
+      } else {
+        const cyclePath = spreadPath.slice(cycleIndex);
+        context.reportError(new GraphQLError(
+          cycleErrorMessage(
+            spreadName,
+            cyclePath.map(s => s.name.value)
+          ),
+          cyclePath.concat(spreadNode)
+        ));
+      }
+    }
+
+    spreadPathIndexByName[fragmentName] = undefined;
+  }
 }

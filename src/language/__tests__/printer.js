@@ -59,6 +59,12 @@ describe('Printer', () => {
         }
       }
     }
+    ... @skip(unless: $foo) {
+      id
+    }
+    ... {
+      id
+    }
   }
 }
 
@@ -66,6 +72,19 @@ mutation likeStory {
   like(story: 123) @defer {
     story {
       id
+    }
+  }
+}
+
+subscription StoryLikeSubscription($input: StoryLikeSubscribeInput) {
+  storyLikeSubscribe(input: $input) {
+    story {
+      likers {
+        count
+      }
+      likeSentence {
+        text
+      }
     }
   }
 }

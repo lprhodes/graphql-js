@@ -12,6 +12,10 @@ import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
 import find from '../../jsutils/find';
 import invariant from '../../jsutils/invariant';
+import {
+  FIELD,
+  DIRECTIVE
+} from '../../language/kinds';
 
 
 export function unknownArgMessage(
@@ -40,7 +44,7 @@ export function KnownArgumentNames(context: ValidationContext): any {
   return {
     Argument(node, key, parent, path, ancestors) {
       var argumentOf = ancestors[ancestors.length - 1];
-      if (argumentOf.kind === 'Field') {
+      if (argumentOf.kind === FIELD) {
         var fieldDef = context.getFieldDef();
         if (fieldDef) {
           var fieldArgDef = find(
@@ -50,17 +54,17 @@ export function KnownArgumentNames(context: ValidationContext): any {
           if (!fieldArgDef) {
             var parentType = context.getParentType();
             invariant(parentType);
-            return new GraphQLError(
+            context.reportError(new GraphQLError(
               unknownArgMessage(
                 node.name.value,
                 fieldDef.name,
                 parentType.name
               ),
               [ node ]
-            );
+            ));
           }
         }
-      } else if (argumentOf.kind === 'Directive') {
+      } else if (argumentOf.kind === DIRECTIVE) {
         var directive = context.getDirective();
         if (directive) {
           var directiveArgDef = find(
@@ -68,10 +72,10 @@ export function KnownArgumentNames(context: ValidationContext): any {
             arg => arg.name === node.name.value
           );
           if (!directiveArgDef) {
-            return new GraphQLError(
+            context.reportError(new GraphQLError(
               unknownDirectiveArgMessage(node.name.value, directive.name),
               [ node ]
-            );
+            ));
           }
         }
       }

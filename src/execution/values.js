@@ -93,14 +93,16 @@ function getVariableValue(
       [ definitionAST ]
     );
   }
-  if (isValidJSValue(input, type)) {
+  var inputType: GraphQLInputType = (type: any);
+  var errors = isValidJSValue(input, inputType);
+  if (!errors.length) {
     if (isNullish(input)) {
       var defaultValue = definitionAST.defaultValue;
       if (defaultValue) {
-        return valueFromAST(defaultValue, type);
+        return valueFromAST(defaultValue, inputType);
       }
     }
-    return coerceValue(type, input);
+    return coerceValue(inputType, input);
   }
   if (isNullish(input)) {
     throw new GraphQLError(
@@ -109,9 +111,10 @@ function getVariableValue(
       [ definitionAST ]
     );
   }
+  var message = errors ? '\n' + errors.join('\n') : '';
   throw new GraphQLError(
-    `Variable "$${variable.name.value}" expected value of type ` +
-    `"${print(definitionAST.type)}" but got: ${JSON.stringify(input)}.`,
+    `Variable "$${variable.name.value}" got invalid value ` +
+    `${JSON.stringify(input)}.${message}`,
     [ definitionAST ]
   );
 }

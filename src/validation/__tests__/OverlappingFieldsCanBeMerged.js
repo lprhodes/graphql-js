@@ -21,7 +21,7 @@ import {
 import {
   GraphQLSchema,
   GraphQLObjectType,
-  GraphQLUnionType,
+  GraphQLInterfaceType,
   GraphQLList,
   GraphQLNonNull,
   GraphQLInt,
@@ -86,6 +86,18 @@ describe('Validate: Overlapping fields can be merged', () => {
     `);
   });
 
+  it('different skip/include directives accepted', () => {
+    // Note: Differing skip/include directives don't create an ambiguous return
+    // value and are acceptable in conditions where differing runtime values
+    // may have the same desired effect of including or skipping a field.
+    expectPassesRule(OverlappingFieldsCanBeMerged, `
+      fragment differentDirectivesWithDifferentAliases on Dog {
+        name @include(if: true)
+        name @include(if: false)
+      }
+    `);
+  });
+
   it('Same aliases with different field targets', () => {
     expectFailsRule(OverlappingFieldsCanBeMerged, `
       fragment sameAliasesWithDifferentFieldTargets on Dog {
@@ -101,6 +113,21 @@ describe('Validate: Overlapping fields can be merged', () => {
     ]);
   });
 
+  it('Same aliases allowed on non-overlapping fields', () => {
+    // This is valid since no object can be both a "Dog" and a "Cat", thus
+    // these fields can never overlap.
+    expectPassesRule(OverlappingFieldsCanBeMerged, `
+      fragment sameAliasesWithDifferentFieldTargets on Pet {
+        ... on Dog {
+          name
+        }
+        ... on Cat {
+          name: nickname
+        }
+      }
+    `);
+  });
+
   it('Alias masking direct field access', () => {
     expectFailsRule(OverlappingFieldsCanBeMerged, `
       fragment aliasMaskingDirectFieldAccess on Dog {
@@ -113,6 +140,36 @@ describe('Validate: Overlapping fields can be merged', () => {
           'nickname and name are different fields'
         ),
         locations: [ { line: 3, column: 9 }, { line: 4, column: 9 } ] },
+    ]);
+  });
+
+  it('different args, second adds an argument', () => {
+    expectFailsRule(OverlappingFieldsCanBeMerged, `
+      fragment conflictingArgs on Dog {
+        doesKnowCommand
+        doesKnowCommand(dogCommand: HEEL)
+      }
+    `, [
+      { message: fieldsConflictMessage(
+          'doesKnowCommand',
+          'they have differing arguments'
+        ),
+        locations: [ { line: 3, column: 9 }, { line: 4, column: 9 } ] }
+    ]);
+  });
+
+  it('different args, second missing an argument', () => {
+    expectFailsRule(OverlappingFieldsCanBeMerged, `
+      fragment conflictingArgs on Dog {
+        doesKnowCommand(dogCommand: SIT)
+        doesKnowCommand
+      }
+    `, [
+      { message: fieldsConflictMessage(
+          'doesKnowCommand',
+          'they have differing arguments'
+        ),
+        locations: [ { line: 3, column: 9 }, { line: 4, column: 9 } ] }
     ]);
   });
 
@@ -131,64 +188,19 @@ describe('Validate: Overlapping fields can be merged', () => {
     ]);
   });
 
-  it('conflicting directives', () => {
-    expectFailsRule(OverlappingFieldsCanBeMerged, `
-      fragment conflictingDirectiveArgs on Dog {
-        name @include(if: true)
-        name @skip(if: false)
+  it('allows different args where no conflict is possible', () => {
+    // This is valid since no object can be both a "Dog" and a "Cat", thus
+    // these fields can never overlap.
+    expectPassesRule(OverlappingFieldsCanBeMerged, `
+      fragment conflictingArgs on Pet {
+        ... on Dog {
+          name(surname: true)
+        }
+        ... on Cat {
+          name
+        }
       }
-    `, [
-      { message: fieldsConflictMessage(
-          'name',
-          'they have differing directives'
-        ),
-        locations: [ { line: 3, column: 9 }, { line: 4, column: 9 } ] }
-    ]);
-  });
-
-  it('conflicting directive args', () => {
-    expectFailsRule(OverlappingFieldsCanBeMerged, `
-      fragment conflictingDirectiveArgs on Dog {
-        name @include(if: true)
-        name @include(if: false)
-      }
-    `, [
-      { message: fieldsConflictMessage(
-          'name',
-          'they have differing directives'
-        ),
-        locations: [ { line: 3, column: 9 }, { line: 4, column: 9 } ] }
-    ]);
-  });
-
-  it('conflicting args with matching directives', () => {
-    expectFailsRule(OverlappingFieldsCanBeMerged, `
-      fragment conflictingArgsWithMatchingDirectiveArgs on Dog {
-        doesKnowCommand(dogCommand: SIT) @include(if: true)
-        doesKnowCommand(dogCommand: HEEL) @include(if: true)
-      }
-    `, [
-      { message: fieldsConflictMessage(
-          'doesKnowCommand',
-          'they have differing arguments'
-        ),
-        locations: [ { line: 3, column: 9 }, { line: 4, column: 9 } ] }
-    ]);
-  });
-
-  it('conflicting directives with matching args', () => {
-    expectFailsRule(OverlappingFieldsCanBeMerged, `
-      fragment conflictingDirectiveArgsWithMatchingArgs on Dog {
-        doesKnowCommand(dogCommand: SIT) @include(if: true)
-        doesKnowCommand(dogCommand: SIT) @skip(if: false)
-      }
-    `, [
-      { message: fieldsConflictMessage(
-          'doesKnowCommand',
-          'they have differing directives'
-        ),
-        locations: [ { line: 3, column: 9 }, { line: 4, column: 9 } ] }
-    ]);
+    `);
   });
 
   it('encounters conflict in fragments', () => {
@@ -258,8 +270,8 @@ describe('Validate: Overlapping fields can be merged', () => {
         ),
         locations: [
           { line: 3, column: 9 },
-          { line: 6, column: 9 },
           { line: 4, column: 11 },
+          { line: 6, column: 9 },
           { line: 7, column: 11 } ] },
     ]);
   });
@@ -285,10 +297,10 @@ describe('Validate: Overlapping fields can be merged', () => {
         ),
         locations: [
           { line: 3, column: 9 },
-          { line: 7, column: 9 },
           { line: 4, column: 11 },
-          { line: 8, column: 11 },
           { line: 5, column: 11 },
+          { line: 7, column: 9 },
+          { line: 8, column: 11 },
           { line: 9, column: 11 } ] },
     ]);
   });
@@ -314,10 +326,10 @@ describe('Validate: Overlapping fields can be merged', () => {
         ),
         locations: [
           { line: 3, column: 9 },
-          { line: 8, column: 9 },
           { line: 4, column: 11 },
-          { line: 9, column: 11 },
           { line: 5, column: 13 },
+          { line: 8, column: 9 },
+          { line: 9, column: 11 },
           { line: 10, column: 13 } ] },
     ]);
   });
@@ -345,47 +357,75 @@ describe('Validate: Overlapping fields can be merged', () => {
         ),
         locations: [
           { line: 4, column: 11 },
-          { line: 7, column: 11 },
           { line: 5, column: 13 },
+          { line: 7, column: 11 },
           { line: 8, column: 13 } ] },
     ]);
   });
 
   describe('return types must be unambiguous', () => {
 
+    var SomeBox = new GraphQLInterfaceType({
+      name: 'SomeBox',
+      resolveType: () => StringBox,
+      fields: {
+        unrelatedField: { type: GraphQLString }
+      }
+    });
+
+    /* eslint-disable no-unused-vars */
     var StringBox = new GraphQLObjectType({
       name: 'StringBox',
+      interfaces: [ SomeBox ],
       fields: {
-        scalar: { type: GraphQLString }
+        scalar: { type: GraphQLString },
+        unrelatedField: { type: GraphQLString },
       }
     });
 
     var IntBox = new GraphQLObjectType({
       name: 'IntBox',
+      interfaces: [ SomeBox ],
       fields: {
-        scalar: { type: GraphQLInt }
+        scalar: { type: GraphQLInt },
+        unrelatedField: { type: GraphQLString },
       }
     });
 
-    var NonNullStringBox1 = new GraphQLObjectType({
+    var NonNullStringBox1 = new GraphQLInterfaceType({
       name: 'NonNullStringBox1',
-      fields: {
-        scalar: { type: new GraphQLNonNull(GraphQLString) }
-      }
-    });
-
-    var NonNullStringBox2 = new GraphQLObjectType({
-      name: 'NonNullStringBox2',
-      fields: {
-        scalar: { type: new GraphQLNonNull(GraphQLString) }
-      }
-    });
-
-    var BoxUnion = new GraphQLUnionType({
-      name: 'BoxUnion',
       resolveType: () => StringBox,
-      types: [ StringBox, IntBox, NonNullStringBox1, NonNullStringBox2 ]
+      fields: {
+        scalar: { type: new GraphQLNonNull(GraphQLString) }
+      }
     });
+
+    var NonNullStringBox1Impl = new GraphQLObjectType({
+      name: 'NonNullStringBox1Impl',
+      interfaces: [ SomeBox, NonNullStringBox1 ],
+      fields: {
+        scalar: { type: new GraphQLNonNull(GraphQLString) },
+        unrelatedField: { type: GraphQLString },
+      }
+    });
+
+    var NonNullStringBox2 = new GraphQLInterfaceType({
+      name: 'NonNullStringBox2',
+      resolveType: () => StringBox,
+      fields: {
+        scalar: { type: new GraphQLNonNull(GraphQLString) }
+      }
+    });
+
+    var NonNullStringBox2Impl = new GraphQLObjectType({
+      name: 'NonNullStringBox2Impl',
+      interfaces: [ SomeBox, NonNullStringBox2 ],
+      fields: {
+        scalar: { type: new GraphQLNonNull(GraphQLString) },
+        unrelatedField: { type: GraphQLString },
+      }
+    });
+    /* eslint-enable no-unused-vars */
 
     var Connection = new GraphQLObjectType({
       name: 'Connection',
@@ -413,16 +453,42 @@ describe('Validate: Overlapping fields can be merged', () => {
       query: new GraphQLObjectType({
         name: 'QueryRoot',
         fields: () => ({
-          boxUnion: { type: BoxUnion },
+          someBox: { type: SomeBox },
           connection: { type: Connection }
         })
       })
     });
 
-    it('conflicting scalar return types', () => {
+    it('conflicting return types which potentially overlap', () => {
+      // This is invalid since an object could potentially be both the Object
+      // type IntBox and the interface type NonNullStringBox1. While that
+      // condition does not exist in the current schema, the schema could
+      // expand in the future to allow this. Thus it is invalid.
       expectFailsRuleWithSchema(schema, OverlappingFieldsCanBeMerged, `
         {
-          boxUnion {
+          someBox {
+            ...on IntBox {
+              scalar
+            }
+            ...on NonNullStringBox1 {
+              scalar
+            }
+          }
+        }
+      `, [
+        { message: fieldsConflictMessage(
+            'scalar',
+            'they return differing types Int and String!'
+          ),
+          locations: [ { line: 5, column: 15 }, { line: 8, column: 15 } ] }
+      ]);
+    });
+
+    it('allows differing return types which cannot overlap', () => {
+      // This is valid since an object cannot be both an IntBox and a StringBox.
+      expectPassesRuleWithSchema(schema, OverlappingFieldsCanBeMerged, `
+        {
+          someBox {
             ...on IntBox {
               scalar
             }
@@ -431,25 +497,30 @@ describe('Validate: Overlapping fields can be merged', () => {
             }
           }
         }
-      `, [
-        { message: fieldsConflictMessage(
-            'scalar',
-            'they return differing types Int and String'
-          ),
-          locations: [ { line: 5, column: 15 }, { line: 8, column: 15 } ] }
-      ]);
+      `);
     });
 
     it('same wrapped scalar return types', () => {
       expectPassesRuleWithSchema(schema, OverlappingFieldsCanBeMerged, `
         {
-          boxUnion {
+          someBox {
             ...on NonNullStringBox1 {
               scalar
             }
             ...on NonNullStringBox2 {
               scalar
             }
+          }
+        }
+      `);
+    });
+
+    it('allows inline typeless fragments', () => {
+      expectPassesRuleWithSchema(schema, OverlappingFieldsCanBeMerged, `
+        {
+          a
+          ... {
+            a
           }
         }
       `);
@@ -481,9 +552,12 @@ describe('Validate: Overlapping fields can be merged', () => {
             [ [ 'node', [ [ 'id', 'id and name are different fields' ] ] ] ]
           ),
           locations: [
-            { line: 14, column: 11 }, { line: 5, column: 13 },
-            { line: 15, column: 13 }, { line: 6, column: 15 },
-            { line: 16, column: 15 }, { line: 7, column: 17 },
+            { line: 14, column: 11 },
+            { line: 15, column: 13 },
+            { line: 16, column: 15 },
+            { line: 5, column: 13 },
+            { line: 6, column: 15 },
+            { line: 7, column: 17 },
           ] }
       ]);
     });
@@ -491,7 +565,7 @@ describe('Validate: Overlapping fields can be merged', () => {
     it('ignores unknown types', () => {
       expectPassesRuleWithSchema(schema, OverlappingFieldsCanBeMerged, `
         {
-          boxUnion {
+          someBox {
             ...on UnknownType {
               scalar
             }

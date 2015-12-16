@@ -11,11 +11,17 @@
 // The GraphQL query recommended for a full schema introspection.
 export { introspectionQuery } from './introspectionQuery';
 
+// Gets the target Operation from a Document
+export { getOperationAST } from './getOperationAST';
+
 // Build a GraphQLSchema from an introspection result.
 export { buildClientSchema } from './buildClientSchema';
 
 // Build a GraphQLSchema from a parsed GraphQL Schema language AST.
 export { buildASTSchema } from './buildASTSchema';
+
+// Extends an existing GraphQLSchema from a parsed GraphQL Schema language AST.
+export { extendSchema } from './extendSchema';
 
 // Print a GraphQLSchema to GraphQL Schema language.
 export { printSchema, printIntrospectionSchema } from './schemaPrinter';
@@ -38,3 +44,6 @@ export { isValidJSValue } from './isValidJSValue';
 
 // Determine if AST values adhere to a GraphQL type.
 export { isValidLiteralValue } from './isValidLiteralValue';
+
+// Concatenates multiple AST together.
+export { concatAST } from './concatAST';

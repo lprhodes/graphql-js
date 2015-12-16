@@ -389,6 +389,11 @@ function defineFieldMap(
       name: fieldName
     };
     invariant(
+      !field.hasOwnProperty('isDeprecated'),
+      `${type}.${fieldName} should provide "deprecationReason" instead ` +
+      `of "isDeprecated".`
+    );
+    invariant(
       isOutputType(field.type),
       `${type}.${fieldName} field type must be Output Type but ` +
       `got: ${field.type}.`
@@ -483,6 +488,7 @@ export type GraphQLFieldConfigArgumentMap = {
 export type GraphQLArgumentConfig = {
   type: GraphQLInputType;
   defaultValue?: any;
+  description?: ?string;
 }
 
 export type GraphQLFieldConfigMap = {
@@ -735,7 +741,7 @@ export type GraphQLUnionTypeConfig = {
  *     });
  *
  * Note: If a value is not provided in a definition, the name of the enum value
- * will be used as it's internal value.
+ * will be used as its internal value.
  */
 export class GraphQLEnumType/* <T> */ {
   name: string;
@@ -827,11 +833,17 @@ function defineEnumValues(
       `${type}.${valueName} must refer to an object with a "value" key ` +
       `representing an internal value but got: ${value}.`
     );
-    value.name = valueName;
-    if (isNullish(value.value)) {
-      value.value = valueName;
-    }
-    return value;
+    invariant(
+      !value.hasOwnProperty('isDeprecated'),
+      `${type}.${valueName} should provide "deprecationReason" instead ` +
+      `of "isDeprecated".`
+    );
+    return {
+      name: valueName,
+      description: value.description,
+      deprecationReason: value.deprecationReason,
+      value: isNullish(value.value) ? valueName : value.value,
+    };
   });
 }
 
@@ -847,15 +859,15 @@ export type GraphQLEnumValueConfigMap/* <T> */ = {
 
 export type GraphQLEnumValueConfig/* <T> */ = {
   value?: any/* T */;
-  deprecationReason?: string;
+  deprecationReason?: ?string;
   description?: ?string;
 }
 
 export type GraphQLEnumValueDefinition/* <T> */ = {
   name: string;
-  value?: any/* T */;
-  deprecationReason?: string;
-  description?: ?string;
+  description: ?string;
+  deprecationReason: ?string;
+  value: any/* T */;
 }
 
 
@@ -1021,9 +1033,9 @@ export class GraphQLList {
  * Note: the enforcement of non-nullability occurs within the executor.
  */
 export class GraphQLNonNull {
-  ofType: GraphQLType;
+  ofType: GraphQLNullableType;
 
-  constructor(type: GraphQLType) {
+  constructor(type: GraphQLNullableType) {
     invariant(
       isType(type) && !(type instanceof GraphQLNonNull),
       `Can only create NonNull of a Nullable GraphQLType but got: ${type}.`

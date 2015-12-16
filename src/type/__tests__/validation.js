@@ -137,6 +137,20 @@ describe('Type System: A Schema must have Object root types', () => {
     }).not.to.throw();
   });
 
+  it('accepts a Schema whose query and subscription types are object types', () => {
+    expect(() => {
+      var SubscriptionType = new GraphQLObjectType({
+        name: 'Subscription',
+        fields: { subscribe: { type: GraphQLString } }
+      });
+
+      return new GraphQLSchema({
+        query: SomeObjectType,
+        subscription: SubscriptionType
+      });
+    }).not.to.throw();
+  });
+
   it('rejects a Schema without a query type', () => {
     expect(
       () => new GraphQLSchema({ })
@@ -161,6 +175,28 @@ describe('Type System: A Schema must have Object root types', () => {
       })
     ).to.throw(
       'Schema mutation must be Object Type if provided but got: SomeInputObject.'
+    );
+  });
+
+  it('rejects a Schema whose subscription type is an input type', () => {
+    expect(
+      () => new GraphQLSchema({
+        query: SomeObjectType,
+        subscription: SomeInputObjectType
+      })
+    ).to.throw(
+      'Schema subscription must be Object Type if provided but got: SomeInputObject.'
+    );
+  });
+
+  it('rejects a Schema whose directives are incorrectly typed', () => {
+    expect(
+      () => new GraphQLSchema({
+        query: SomeObjectType,
+        directives: [ 'somedirective' ]
+      })
+    ).to.throw(
+      'Schema directives must be Array<GraphQLDirective> if provided but got: somedirective.'
     );
   });
 
@@ -1438,7 +1474,7 @@ describe('Objects must adhere to Interface they implement', () => {
     }).not.to.throw();
   });
 
-  it('rejects an Object which implements an Interface field along with more arguments', () => {
+  it('accepts an Object which implements an Interface field along with additional optional arguments', () => {
     expect(() => {
       var AnotherInterface = new GraphQLInterfaceType({
         name: 'AnotherInterface',
@@ -1468,9 +1504,42 @@ describe('Objects must adhere to Interface they implement', () => {
       });
 
       return schemaWithFieldType(AnotherObject);
+    }).not.to.throw();
+  });
+
+  it('rejects an Object which implements an Interface field along with additional required arguments', () => {
+    expect(() => {
+      var AnotherInterface = new GraphQLInterfaceType({
+        name: 'AnotherInterface',
+        resolveType: () => null,
+        fields: {
+          field: {
+            type: GraphQLString,
+            args: {
+              input: { type: GraphQLString },
+            }
+          }
+        }
+      });
+
+      var AnotherObject = new GraphQLObjectType({
+        name: 'AnotherObject',
+        interfaces: [ AnotherInterface ],
+        fields: {
+          field: {
+            type: GraphQLString,
+            args: {
+              input: { type: GraphQLString },
+              anotherInput: { type: new GraphQLNonNull(GraphQLString) },
+            }
+          }
+        }
+      });
+
+      return schemaWithFieldType(AnotherObject);
     }).to.throw(
-      'AnotherInterface.field does not define argument "anotherInput" but ' +
-      'AnotherObject.field provides it.'
+      'AnotherObject.field(anotherInput:) is of required type "String!" but ' +
+      'is not also provided by the interface AnotherInterface.field.'
     );
   });
 
@@ -1510,12 +1579,7 @@ describe('Objects must adhere to Interface they implement', () => {
         name: 'AnotherInterface',
         resolveType: () => null,
         fields: {
-          field: {
-            type: GraphQLString,
-            args: {
-              input: { type: GraphQLString },
-            }
-          }
+          field: { type: GraphQLString }
         }
       });
 
@@ -1523,12 +1587,7 @@ describe('Objects must adhere to Interface they implement', () => {
         name: 'AnotherObject',
         interfaces: [ AnotherInterface ],
         fields: {
-          field: {
-            type: SomeScalarType,
-            args: {
-              input: { type: GraphQLString },
-            }
-          }
+          field: { type: SomeScalarType }
         }
       });
 
@@ -1537,6 +1596,89 @@ describe('Objects must adhere to Interface they implement', () => {
       'AnotherInterface.field expects type "String" but ' +
       'AnotherObject.field provides type "SomeScalar".'
     );
+  });
+
+  it('rejects an Object with a differently typed Interface field', () => {
+    expect(() => {
+      var TypeA = new GraphQLObjectType({
+        name: 'A',
+        fields: {
+          foo: { type: GraphQLString }
+        }
+      });
+
+      var TypeB = new GraphQLObjectType({
+        name: 'B',
+        fields: {
+          foo: { type: GraphQLString }
+        }
+      });
+
+      var AnotherInterface = new GraphQLInterfaceType({
+        name: 'AnotherInterface',
+        resolveType: () => null,
+        fields: {
+          field: { type: TypeA }
+        }
+      });
+
+      var AnotherObject = new GraphQLObjectType({
+        name: 'AnotherObject',
+        interfaces: [ AnotherInterface ],
+        fields: {
+          field: { type: TypeB }
+        }
+      });
+
+      return schemaWithFieldType(AnotherObject);
+    }).to.throw(
+      'AnotherInterface.field expects type "A" but ' +
+      'AnotherObject.field provides type "B".'
+    );
+  });
+
+  it('accepts an Object with a subtyped Interface field (interface)', () => {
+    expect(() => {
+      var AnotherInterface = new GraphQLInterfaceType({
+        name: 'AnotherInterface',
+        resolveType: () => null,
+        fields: () => ({
+          field: { type: AnotherInterface }
+        })
+      });
+
+      var AnotherObject = new GraphQLObjectType({
+        name: 'AnotherObject',
+        interfaces: [ AnotherInterface ],
+        fields: () => ({
+          field: { type: AnotherObject }
+        })
+      });
+
+      return schemaWithFieldType(AnotherObject);
+    }).not.to.throw();
+  });
+
+  it('accepts an Object with a subtyped Interface field (union)', () => {
+    expect(() => {
+      var AnotherInterface = new GraphQLInterfaceType({
+        name: 'AnotherInterface',
+        resolveType: () => null,
+        fields: {
+          field: { type: SomeUnionType }
+        }
+      });
+
+      var AnotherObject = new GraphQLObjectType({
+        name: 'AnotherObject',
+        interfaces: [ AnotherInterface ],
+        fields: {
+          field: { type: SomeObjectType }
+        }
+      });
+
+      return schemaWithFieldType(AnotherObject);
+    }).not.to.throw();
   });
 
   it('rejects an Object missing an Interface argument', () => {
@@ -1628,7 +1770,57 @@ describe('Objects must adhere to Interface they implement', () => {
     }).not.to.throw();
   });
 
-  it('rejects an Object with a differently modified Interface field type', () => {
+  it('rejects an Object with a non-list Interface field list type', () => {
+    expect(() => {
+      var AnotherInterface = new GraphQLInterfaceType({
+        name: 'AnotherInterface',
+        resolveType: () => null,
+        fields: {
+          field: { type: new GraphQLList(GraphQLString) }
+        }
+      });
+
+      var AnotherObject = new GraphQLObjectType({
+        name: 'AnotherObject',
+        interfaces: [ AnotherInterface ],
+        fields: {
+          field: { type: GraphQLString }
+        }
+      });
+
+      return schemaWithFieldType(AnotherObject);
+    }).to.throw(
+      'AnotherInterface.field expects type "[String]" but ' +
+      'AnotherObject.field provides type "String".'
+    );
+  });
+
+  it('rejects an Object with a list Interface field non-list type', () => {
+    expect(() => {
+      var AnotherInterface = new GraphQLInterfaceType({
+        name: 'AnotherInterface',
+        resolveType: () => null,
+        fields: {
+          field: { type: GraphQLString }
+        }
+      });
+
+      var AnotherObject = new GraphQLObjectType({
+        name: 'AnotherObject',
+        interfaces: [ AnotherInterface ],
+        fields: {
+          field: { type: new GraphQLList(GraphQLString) }
+        }
+      });
+
+      return schemaWithFieldType(AnotherObject);
+    }).to.throw(
+      'AnotherInterface.field expects type "String" but ' +
+      'AnotherObject.field provides type "[String]".'
+    );
+  });
+
+  it('accepts an Object with a subset non-null Interface field type', () => {
     expect(() => {
       var AnotherInterface = new GraphQLInterfaceType({
         name: 'AnotherInterface',
@@ -1647,9 +1839,64 @@ describe('Objects must adhere to Interface they implement', () => {
       });
 
       return schemaWithFieldType(AnotherObject);
+    }).not.to.throw();
+  });
+
+  it('rejects an Object with a superset nullable Interface field type', () => {
+    expect(() => {
+      var AnotherInterface = new GraphQLInterfaceType({
+        name: 'AnotherInterface',
+        resolveType: () => null,
+        fields: {
+          field: { type: new GraphQLNonNull(GraphQLString) }
+        }
+      });
+
+      var AnotherObject = new GraphQLObjectType({
+        name: 'AnotherObject',
+        interfaces: [ AnotherInterface ],
+        fields: {
+          field: { type: GraphQLString }
+        }
+      });
+
+      return schemaWithFieldType(AnotherObject);
     }).to.throw(
-      'AnotherInterface.field expects type "String" but ' +
-      'AnotherObject.field provides type "String!".'
+      'AnotherInterface.field expects type "String!" but ' +
+      'AnotherObject.field provides type "String".'
+    );
+  });
+
+  it('does not allow isDeprecated without deprecationReason on field', () => {
+    expect(() => {
+      var OldObject = new GraphQLObjectType({
+        name: 'OldObject',
+        fields: {
+          field: {
+            type: GraphQLString,
+            isDeprecated: true
+          }
+        }
+      });
+
+      return schemaWithFieldType(OldObject);
+    }).to.throw(
+      'OldObject.field should provide "deprecationReason" instead ' +
+      'of "isDeprecated".'
+    );
+  });
+
+  it('does not allow isDeprecated without deprecationReason on enum', () => {
+    expect(() =>
+      new GraphQLEnumType({
+        name: 'SomeEnum',
+        values: {
+          value: { isDeprecated: true }
+        }
+      })
+    ).to.throw(
+      'SomeEnum.value should provide "deprecationReason" instead ' +
+      'of "isDeprecated".'
     );
   });
 

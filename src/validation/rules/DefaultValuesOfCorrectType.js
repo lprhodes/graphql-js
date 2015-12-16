@@ -27,10 +27,11 @@ export function defaultForNonNullArgMessage(
 export function badValueForDefaultArgMessage(
   varName: any,
   type: any,
-  value: any
+  value: any,
+  verboseErrors?: [any]
 ): string {
-  return `Variable "$${varName}" of type "${type}" has invalid default ` +
-    `value: ${value}.`;
+  var message = verboseErrors ? '\n' + verboseErrors.join('\n') : '';
+  return `Variable "$${varName} has invalid default value ${value}.${message}`;
 }
 
 /**
@@ -46,17 +47,28 @@ export function DefaultValuesOfCorrectType(context: ValidationContext): any {
       var defaultValue = varDefAST.defaultValue;
       var type = context.getInputType();
       if (type instanceof GraphQLNonNull && defaultValue) {
-        return new GraphQLError(
+        context.reportError(new GraphQLError(
           defaultForNonNullArgMessage(name, type, type.ofType),
           [ defaultValue ]
-        );
+        ));
       }
-      if (type && defaultValue && !isValidLiteralValue(type, defaultValue)) {
-        return new GraphQLError(
-          badValueForDefaultArgMessage(name, type, print(defaultValue)),
-          [ defaultValue ]
-        );
+      if (type && defaultValue) {
+        var errors = isValidLiteralValue(type, defaultValue);
+        if (errors && errors.length > 0) {
+          context.reportError(new GraphQLError(
+            badValueForDefaultArgMessage(
+              name,
+              type,
+              print(defaultValue),
+              errors
+            ),
+            [ defaultValue ]
+          ));
+        }
       }
-    }
+      return false;
+    },
+    SelectionSet: () => false,
+    FragmentDefinition: () => false,
   };
 }

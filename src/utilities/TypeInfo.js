@@ -53,8 +53,15 @@ export class TypeInfo {
   _fieldDefStack: Array<?GraphQLFieldDefinition>;
   _directive: ?GraphQLDirective;
   _argument: ?GraphQLArgument;
+  _getFieldDef: typeof getFieldDef;
 
-  constructor(schema: GraphQLSchema) {
+  constructor(
+    schema: GraphQLSchema,
+    // NOTE: this experimental optional second parameter is only needed in order
+    // to support non-spec-compliant codebases. You should never need to use it.
+    // It may disappear in the future.
+    getFieldDefFn?: typeof getFieldDef
+  ) {
     this._schema = schema;
     this._typeStack = [];
     this._parentTypeStack = [];
@@ -62,6 +69,7 @@ export class TypeInfo {
     this._fieldDefStack = [];
     this._directive = null;
     this._argument = null;
+    this._getFieldDef = getFieldDefFn || getFieldDef;
   }
 
   getType(): ?GraphQLOutputType {
@@ -99,7 +107,6 @@ export class TypeInfo {
   // Flow does not yet handle this case.
   enter(node: any/* Node */) {
     var schema = this._schema;
-    var type;
     switch (node.kind) {
       case Kind.SELECTION_SET:
         var namedType = getNamedType(this.getType());
@@ -114,7 +121,7 @@ export class TypeInfo {
         var parentType = this.getParentType();
         var fieldDef;
         if (parentType) {
-          fieldDef = getFieldDef(schema, parentType, node);
+          fieldDef = this._getFieldDef(schema, parentType, node);
         }
         this._fieldDefStack.push(fieldDef);
         this._typeStack.push(fieldDef && fieldDef.type);
@@ -123,20 +130,27 @@ export class TypeInfo {
         this._directive = schema.getDirective(node.name.value);
         break;
       case Kind.OPERATION_DEFINITION:
+        let type;
         if (node.operation === 'query') {
           type = schema.getQueryType();
         } else if (node.operation === 'mutation') {
           type = schema.getMutationType();
+        } else if (node.operation === 'subscription') {
+          type = schema.getSubscriptionType();
         }
         this._typeStack.push(type);
         break;
       case Kind.INLINE_FRAGMENT:
       case Kind.FRAGMENT_DEFINITION:
-        type = typeFromAST(schema, node.typeCondition);
-        this._typeStack.push(type);
+        var typeConditionAST = node.typeCondition;
+        let outputType = typeConditionAST ?
+          typeFromAST(schema, typeConditionAST) :
+          this.getType();
+        this._typeStack.push(((outputType: any): GraphQLOutputType));
         break;
       case Kind.VARIABLE_DEFINITION:
-        this._inputTypeStack.push(typeFromAST(schema, node.type));
+        let inputType = typeFromAST(schema, node.type);
+        this._inputTypeStack.push(((inputType: any): GraphQLInputType));
         break;
       case Kind.ARGUMENT:
         var argDef;
@@ -157,7 +171,9 @@ export class TypeInfo {
       case Kind.LIST:
         var listType = getNullableType(this.getInputType());
         this._inputTypeStack.push(
-          listType instanceof GraphQLList ? listType.ofType : undefined
+          listType instanceof GraphQLList ?
+            ((listType.ofType: any): GraphQLInputType) :
+            undefined
         );
         break;
       case Kind.OBJECT_FIELD:

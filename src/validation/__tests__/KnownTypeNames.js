@@ -28,7 +28,7 @@ describe('Validate: Known type names', () => {
     expectPassesRule(KnownTypeNames, `
       query Foo($var: String, $required: [String!]!) {
         user(id: 4) {
-          pets { ... on Pet { name }, ...PetFields }
+          pets { ... on Pet { name }, ...PetFields, ... { name } }
         }
       }
       fragment PetFields on Pet {
@@ -52,6 +52,28 @@ describe('Validate: Known type names', () => {
       unknownType('JumbledUpLetters', 2, 23),
       unknownType('Badger', 5, 25),
       unknownType('Peettt', 8, 29)
+    ]);
+  });
+
+  it('ignores type definitions', () => {
+    expectFailsRule(KnownTypeNames, `
+      type NotInTheSchema {
+        field: FooBar
+      }
+      interface FooBar {
+        field: NotInTheSchema
+      }
+      union U = A | B
+      input Blob {
+        field: UnknownType
+      }
+      query Foo($var: NotInTheSchema) {
+        user(id: $var) {
+          id
+        }
+      }
+    `, [
+      unknownType('NotInTheSchema', 12, 23),
     ]);
   });
 

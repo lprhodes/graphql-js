@@ -13,6 +13,7 @@ export var introspectionQuery = `
     __schema {
       queryType { name }
       mutationType { name }
+      subscriptionType { name }
       types {
         ...FullType
       }
@@ -33,7 +34,7 @@ export var introspectionQuery = `
     kind
     name
     description
-    fields {
+    fields(includeDeprecated: true) {
       name
       description
       args {
@@ -51,7 +52,7 @@ export var introspectionQuery = `
     interfaces {
       ...TypeRef
     }
-    enumValues {
+    enumValues(includeDeprecated: true) {
       name
       description
       isDeprecated
@@ -94,6 +95,7 @@ export type IntrospectionQuery = {
 export type IntrospectionSchema = {
   queryType: IntrospectionNamedTypeRef;
   mutationType: ?IntrospectionNamedTypeRef;
+  subscriptionType: ?IntrospectionNamedTypeRef;
   types: Array<IntrospectionType>;
   directives: Array<IntrospectionDirective>;
 }

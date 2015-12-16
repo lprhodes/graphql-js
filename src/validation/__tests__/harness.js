@@ -26,6 +26,11 @@ import {
   GraphQLBoolean,
   GraphQLID
 } from '../../type';
+import {
+  GraphQLDirective,
+  GraphQLIncludeDirective,
+  GraphQLSkipDirective,
+} from '../../type/directives';
 
 
 var Being = new GraphQLInterfaceType({
@@ -287,8 +292,16 @@ var QueryRoot = new GraphQLObjectType({
   })
 });
 
-var defaultSchema = new GraphQLSchema({
-  query: QueryRoot
+export var testSchema = new GraphQLSchema({
+  query: QueryRoot,
+  directives: [
+    new GraphQLDirective({
+      name: 'operationOnly',
+      onOperation: true
+    }),
+    GraphQLIncludeDirective,
+    GraphQLSkipDirective,
+  ]
 });
 
 function expectValid(schema, rules, queryString) {
@@ -303,11 +316,11 @@ function expectInvalid(schema, rules, queryString, expectedErrors) {
 }
 
 export function expectPassesRule(rule, queryString) {
-  return expectValid(defaultSchema, [ rule ], queryString);
+  return expectValid(testSchema, [ rule ], queryString);
 }
 
 export function expectFailsRule(rule, queryString, errors) {
-  return expectInvalid(defaultSchema, [ rule ], queryString, errors);
+  return expectInvalid(testSchema, [ rule ], queryString, errors);
 }
 
 export function expectPassesRuleWithSchema(schema, rule, queryString, errors) {
