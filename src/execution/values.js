@@ -162,6 +162,10 @@ function coerceValue(type: GraphQLInputType, value: any): any {
     type instanceof GraphQLScalarType || type instanceof GraphQLEnumType,
     'Must be input type'
   );
+  
+  if (value === null) {
+    return null;
+  }
 
   var parsed = type.parseValue(value);
   if (!isNullish(parsed)) {
