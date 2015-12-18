@@ -21,4 +21,4 @@ fi
 #
 #    var language = require('graphql/language');
 #
-babel --optional runtime src --ignore __tests__ --out-dir ./;
+babel --presets es2015,stage-0,react  --optional runtime src --ignore __tests__ --out-dir ./;
