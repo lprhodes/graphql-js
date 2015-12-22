@@ -1,4 +1,10 @@
-# GraphQL.js
+# GraphQL.js (Nullable)
+
+This branch alters the way graphql treats null values; instead of ignoring them, null values are passed through which allows developers to delete the data from the data store.
+
+Additionally I've merged a pull request that provides a new JSON scaler type. (https://github.com/graphql/graphql-js/pull/242)
+
+# GraphQL.js (Original)
 
 This is a technical preview of the JavaScript reference implementation for
 GraphQL, a query language created by Facebook for describing data requirements
