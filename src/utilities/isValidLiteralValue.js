@@ -41,14 +41,13 @@ export function isValidLiteralValue(
 ): [ string ] {
   // A value must be provided if the type is non-null.
   if (type instanceof GraphQLNonNull) {
-    var ofType: GraphQLInputType = (type.ofType: any);
     if (!valueAST) {
-      if (ofType.name) {
-        return [ `Expected "${ofType.name}!", found null.` ];
+      if (type.ofType.name) {
+        return [ `Expected "${type.ofType.name}!", found null.` ];
       }
       return [ 'Expected non-null value, found null.' ];
     }
-    return isValidLiteralValue(ofType, valueAST);
+    return isValidLiteralValue(type.ofType, valueAST);
   }
 
   if (!valueAST) {
@@ -63,10 +62,10 @@ export function isValidLiteralValue(
 
   // Lists accept a non-list value as a list of one.
   if (type instanceof GraphQLList) {
-    var itemType: GraphQLInputType = (type.ofType: any);
+    const itemType = type.ofType;
     if (valueAST.kind === LIST) {
       return (valueAST: ListValue).values.reduce((acc, itemAST, index) => {
-        var errors = isValidLiteralValue(itemType, itemAST);
+        const errors = isValidLiteralValue(itemType, itemAST);
         return acc.concat(errors.map(error =>
           `In element #${index}: ${error}`
         ));
@@ -80,13 +79,13 @@ export function isValidLiteralValue(
     if (valueAST.kind !== OBJECT) {
       return [ `Expected "${type.name}", found not an object.` ];
     }
-    var fields = type.getFields();
+    const fields = type.getFields();
 
-    var errors = [];
+    const errors = [];
 
     // Ensure every provided field is defined.
-    var fieldASTs = (valueAST: ObjectValue).fields;
-    for (var providedFieldAST of fieldASTs) {
+    const fieldASTs = (valueAST: ObjectValue).fields;
+    for (const providedFieldAST of fieldASTs) {
       if (!fields[providedFieldAST.name.value]) {
         errors.push(
           `In field "${providedFieldAST.name.value}": Unknown field.`
@@ -95,9 +94,9 @@ export function isValidLiteralValue(
     }
 
     // Ensure every defined field is valid.
-    var fieldASTMap = keyMap(fieldASTs, fieldAST => fieldAST.name.value);
-    for (var fieldName of Object.keys(fields)) {
-      var result = isValidLiteralValue(
+    const fieldASTMap = keyMap(fieldASTs, fieldAST => fieldAST.name.value);
+    for (const fieldName of Object.keys(fields)) {
+      const result = isValidLiteralValue(
         fields[fieldName].type,
         fieldASTMap[fieldName] && fieldASTMap[fieldName].value
       );
@@ -116,7 +115,7 @@ export function isValidLiteralValue(
 
   // Scalar/Enum input checks to ensure the type can parse the value to
   // a non-null value.
-  var parseResult = type.parseLiteral(valueAST);
+  const parseResult = type.parseLiteral(valueAST);
   if (isNullish(parseResult)) {
     return [ `Expected type "${type.name}", found ${print(valueAST)}.` ];
   }

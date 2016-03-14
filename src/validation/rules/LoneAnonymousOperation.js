@@ -14,7 +14,7 @@ import { OPERATION_DEFINITION } from '../../language/kinds';
 
 
 export function anonOperationNotAloneMessage(): string {
-  return `This anonymous operation must be the only defined operation.`;
+  return 'This anonymous operation must be the only defined operation.';
 }
 
 /**
@@ -24,7 +24,7 @@ export function anonOperationNotAloneMessage(): string {
  * (the query short-hand) that it contains only that one operation definition.
  */
 export function LoneAnonymousOperation(context: ValidationContext): any {
-  var operationCount = 0;
+  let operationCount = 0;
   return {
     Document(node) {
       operationCount = node.definitions.filter(

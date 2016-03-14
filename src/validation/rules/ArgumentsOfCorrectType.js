@@ -12,15 +12,16 @@ import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
 import { print } from '../../language/printer';
 import { isValidLiteralValue } from '../../utilities/isValidLiteralValue';
+import type { GraphQLType } from '../../type/definition';
 
 
 export function badValueMessage(
-  argName: any,
-  type: any,
-  value: any,
-  verboseErrors?: [any]
+  argName: string,
+  type: GraphQLType,
+  value: string,
+  verboseErrors?: [string]
 ): string {
-  var message = verboseErrors ? '\n' + verboseErrors.join('\n') : '';
+  const message = verboseErrors ? '\n' + verboseErrors.join('\n') : '';
   return (
     `Argument "${argName}" has invalid value ${value}.${message}`
   );
@@ -35,9 +36,9 @@ export function badValueMessage(
 export function ArgumentsOfCorrectType(context: ValidationContext): any {
   return {
     Argument(argAST) {
-      var argDef = context.getArgument();
+      const argDef = context.getArgument();
       if (argDef) {
-        var errors = isValidLiteralValue(argDef.type, argAST.value);
+        const errors = isValidLiteralValue(argDef.type, argAST.value);
         if (errors && errors.length > 0) {
           context.reportError(new GraphQLError(
             badValueMessage(

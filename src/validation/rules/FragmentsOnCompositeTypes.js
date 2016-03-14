@@ -12,17 +12,18 @@ import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
 import { print } from '../../language/printer';
 import { isCompositeType } from '../../type/definition';
+import type { GraphQLType } from '../../type/definition';
 
 
 export function inlineFragmentOnNonCompositeErrorMessage(
-  type: any
+  type: GraphQLType
 ): string {
   return `Fragment cannot condition on non composite type "${type}".`;
 }
 
 export function fragmentOnNonCompositeErrorMessage(
-  fragName: any,
-  type: any
+  fragName: string,
+  type: GraphQLType
 ): string {
   return `Fragment "${fragName}" cannot condition on non composite ` +
     `type "${type}".`;
@@ -38,7 +39,7 @@ export function fragmentOnNonCompositeErrorMessage(
 export function FragmentsOnCompositeTypes(context: ValidationContext): any {
   return {
     InlineFragment(node) {
-      var type = context.getType();
+      const type = context.getType();
       if (node.typeCondition && type && !isCompositeType(type)) {
         context.reportError(new GraphQLError(
           inlineFragmentOnNonCompositeErrorMessage(print(node.typeCondition)),
@@ -47,7 +48,7 @@ export function FragmentsOnCompositeTypes(context: ValidationContext): any {
       }
     },
     FragmentDefinition(node) {
-      var type = context.getType();
+      const type = context.getType();
       if (type && !isCompositeType(type)) {
         context.reportError(new GraphQLError(
           fragmentOnNonCompositeErrorMessage(

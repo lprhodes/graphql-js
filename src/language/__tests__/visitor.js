@@ -20,10 +20,84 @@ import { getNamedType, isCompositeType } from '../../type';
 
 
 describe('Visitor', () => {
+
+  it('allows editing a node both on enter and on leave', () => {
+
+    const ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
+
+    let selectionSet;
+
+    const editedAst = visit(ast, {
+      OperationDefinition: {
+        enter(node) {
+          selectionSet = node.selectionSet;
+          return {
+            ...node,
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: []
+            },
+            didEnter: true,
+          };
+        },
+        leave(node) {
+          return {
+            ...node,
+            selectionSet,
+            didLeave: true,
+          };
+        }
+      }
+    });
+
+    expect(editedAst).to.deep.equal({
+      ...ast,
+      definitions: [
+        {
+          ...ast.definitions[0],
+          didEnter: true,
+          didLeave: true
+        }
+      ]
+    });
+  });
+
+  it('allows editing the root node on enter and on leave', () => {
+
+    const ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
+
+    const { definitions } = ast;
+
+    const editedAst = visit(ast, {
+      Document: {
+        enter(node) {
+          return {
+            ...node,
+            definitions: [],
+            didEnter: true,
+          };
+        },
+        leave(node) {
+          return {
+            ...node,
+            definitions,
+            didLeave: true,
+          };
+        }
+      }
+    });
+
+    expect(editedAst).to.deep.equal({
+      ...ast,
+      didEnter: true,
+      didLeave: true
+    });
+  });
+
   it('allows for editing on enter', () => {
 
-    var ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
-    var editedAst = visit(ast, {
+    const ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
+    const editedAst = visit(ast, {
       enter(node) {
         if (node.kind === 'Field' && node.name.value === 'b') {
           return null;
@@ -42,8 +116,8 @@ describe('Visitor', () => {
 
   it('allows for editing on leave', () => {
 
-    var ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
-    var editedAst = visit(ast, {
+    const ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
+    const editedAst = visit(ast, {
       leave(node) {
         if (node.kind === 'Field' && node.name.value === 'b') {
           return null;
@@ -62,15 +136,15 @@ describe('Visitor', () => {
 
   it('visits edited node', () => {
 
-    var addedField =
+    const addedField =
       { kind: 'Field',
         name:
          { kind: 'Name',
            value: '__typename' } };
 
-    var didVisitAddedField;
+    let didVisitAddedField;
 
-    var ast = parse('{ a { x } }');
+    const ast = parse('{ a { x } }');
     visit(ast, {
       enter(node) {
         if (node.kind === 'Field' && node.name.value === 'a') {
@@ -90,9 +164,9 @@ describe('Visitor', () => {
 
   it('allows skipping a sub-tree', () => {
 
-    var visited = [];
+    const visited = [];
 
-    var ast = parse('{ a, b { x }, c }');
+    const ast = parse('{ a, b { x }, c }');
     visit(ast, {
       enter(node) {
         visited.push([ 'enter', node.kind, node.value ]);
@@ -127,9 +201,9 @@ describe('Visitor', () => {
 
   it('allows early exit while visiting', () => {
 
-    var visited = [];
+    const visited = [];
 
-    var ast = parse('{ a, b { x }, c }');
+    const ast = parse('{ a, b { x }, c }');
     visit(ast, {
       enter(node) {
         visited.push([ 'enter', node.kind, node.value ]);
@@ -162,9 +236,9 @@ describe('Visitor', () => {
 
   it('allows early exit while leaving', () => {
 
-    var visited = [];
+    const visited = [];
 
-    var ast = parse('{ a, b { x }, c }');
+    const ast = parse('{ a, b { x }, c }');
     visit(ast, {
       enter(node) {
         visited.push([ 'enter', node.kind, node.value ]);
@@ -198,9 +272,9 @@ describe('Visitor', () => {
 
   it('allows a named functions visitor API', () => {
 
-    var visited = [];
+    const visited = [];
 
-    var ast = parse('{ a, b { x }, c }');
+    const ast = parse('{ a, b { x }, c }');
     visit(ast, {
       Name(node) {
         visited.push([ 'enter', node.kind, node.value ]);
@@ -228,16 +302,16 @@ describe('Visitor', () => {
   });
 
 
-  var kitchenSink = readFileSync(
+  const kitchenSink = readFileSync(
     join(__dirname, '/kitchen-sink.graphql'),
     { encoding: 'utf8' }
   );
 
   it('visits kitchen sink', () => {
 
-    var ast = parse(kitchenSink);
+    const ast = parse(kitchenSink);
 
-    var visited = [];
+    const visited = [];
 
     visit(ast, {
       enter(node, key, parent) {
@@ -556,9 +630,9 @@ describe('Visitor', () => {
     // using visitInParallel.
     it('allows skipping a sub-tree', () => {
 
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a, b { x }, c }');
+      const ast = parse('{ a, b { x }, c }');
       visit(ast, visitInParallel([ {
         enter(node) {
           visited.push([ 'enter', node.kind, node.value ]);
@@ -592,9 +666,9 @@ describe('Visitor', () => {
     });
 
     it('allows skipping different sub-trees', () => {
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a { x }, b { y} }');
+      const ast = parse('{ a { x }, b { y} }');
       visit(ast, visitInParallel([
         {
           enter(node) {
@@ -662,9 +736,9 @@ describe('Visitor', () => {
     // using visitInParallel.
     it('allows early exit while visiting', () => {
 
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a, b { x }, c }');
+      const ast = parse('{ a, b { x }, c }');
       visit(ast, visitInParallel([ {
         enter(node) {
           visited.push([ 'enter', node.kind, node.value ]);
@@ -696,9 +770,9 @@ describe('Visitor', () => {
 
     it('allows early exit from different points', () => {
 
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a { y }, b { x } }');
+      const ast = parse('{ a { y }, b { x } }');
       visit(ast, visitInParallel([
         {
           enter(node) {
@@ -752,9 +826,9 @@ describe('Visitor', () => {
     // using visitInParallel.
     it('allows early exit while leaving', () => {
 
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a, b { x }, c }');
+      const ast = parse('{ a, b { x }, c }');
       visit(ast, visitInParallel([ {
         enter(node) {
           visited.push([ 'enter', node.kind, node.value ]);
@@ -787,9 +861,9 @@ describe('Visitor', () => {
 
     it('allows early exit from leaving different points', () => {
 
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a { y }, b { x } }');
+      const ast = parse('{ a { y }, b { x } }');
       visit(ast, visitInParallel([
         {
           enter(node) {
@@ -856,10 +930,10 @@ describe('Visitor', () => {
     });
 
     it('allows for editing on enter', () => {
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
-      var editedAst = visit(ast, visitInParallel([
+      const ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
+      const editedAst = visit(ast, visitInParallel([
         {
           enter(node) {
             if (node.kind === 'Field' && node.name.value === 'b') {
@@ -914,10 +988,10 @@ describe('Visitor', () => {
     });
 
     it('allows for editing on leave', () => {
-      var visited = [];
+      const visited = [];
 
-      var ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
-      var editedAst = visit(ast, visitInParallel([
+      const ast = parse('{ a, b, c { a, b, c } }', { noLocation: true });
+      const editedAst = visit(ast, visitInParallel([
         {
           leave(node) {
             if (node.kind === 'Field' && node.name.value === 'b') {
@@ -989,9 +1063,9 @@ describe('Visitor', () => {
       const ast = parse('{ human(id: 4) { name, pets { name }, unknown } }');
       visit(ast, visitWithTypeInfo(typeInfo, {
         enter(node) {
-          let parentType = typeInfo.getParentType();
-          let type = typeInfo.getType();
-          let inputType = typeInfo.getInputType();
+          const parentType = typeInfo.getParentType();
+          const type = typeInfo.getType();
+          const inputType = typeInfo.getInputType();
           visited.push([
             'enter',
             node.kind,
@@ -1002,9 +1076,9 @@ describe('Visitor', () => {
           ]);
         },
         leave(node) {
-          let parentType = typeInfo.getParentType();
-          let type = typeInfo.getType();
-          let inputType = typeInfo.getInputType();
+          const parentType = typeInfo.getParentType();
+          const type = typeInfo.getType();
+          const inputType = typeInfo.getInputType();
           visited.push([
             'leave',
             node.kind,
@@ -1065,9 +1139,9 @@ describe('Visitor', () => {
       );
       const editedAst = visit(ast, visitWithTypeInfo(typeInfo, {
         enter(node) {
-          let parentType = typeInfo.getParentType();
-          let type = typeInfo.getType();
-          let inputType = typeInfo.getInputType();
+          const parentType = typeInfo.getParentType();
+          const type = typeInfo.getType();
+          const inputType = typeInfo.getInputType();
           visited.push([
             'enter',
             node.kind,
@@ -1102,9 +1176,9 @@ describe('Visitor', () => {
           }
         },
         leave(node) {
-          let parentType = typeInfo.getParentType();
-          let type = typeInfo.getType();
-          let inputType = typeInfo.getInputType();
+          const parentType = typeInfo.getParentType();
+          const type = typeInfo.getType();
+          const inputType = typeInfo.getInputType();
           visited.push([
             'leave',
             node.kind,

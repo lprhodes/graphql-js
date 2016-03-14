@@ -42,7 +42,6 @@ import { TypeKind } from '../type/introspection';
 
 import type {
   GraphQLType,
-  GraphQLNullableType,
   GraphQLInputType,
   GraphQLOutputType,
   GraphQLNamedType,
@@ -77,10 +76,10 @@ export function buildClientSchema(
 ): GraphQLSchema {
 
   // Get the schema from the introspection result.
-  var schemaIntrospection = introspection.__schema;
+  const schemaIntrospection = introspection.__schema;
 
   // Converts the list of types into a keyMap based on the type names.
-  var typeIntrospectionMap = keyMap(
+  const typeIntrospectionMap = keyMap(
     schemaIntrospection.types,
     type => type.name
   );
@@ -88,7 +87,7 @@ export function buildClientSchema(
   // A cache to use to store the actual GraphQLType definition objects by name.
   // Initialize to the GraphQL built in scalars. All functions below are inline
   // so that this type def cache is within the scope of the closure.
-  var typeDefCache = {
+  const typeDefCache = {
     String: GraphQLString,
     Int: GraphQLInt,
     Float: GraphQLFloat,
@@ -100,19 +99,23 @@ export function buildClientSchema(
   // preferring cached instances before building new instances.
   function getType(typeRef: IntrospectionTypeRef): GraphQLType {
     if (typeRef.kind === TypeKind.LIST) {
-      var itemRef = ((typeRef: any): IntrospectionListTypeRef).ofType;
+      const itemRef = ((typeRef: any): IntrospectionListTypeRef).ofType;
       if (!itemRef) {
         throw new Error('Decorated type deeper than introspection query.');
       }
       return new GraphQLList(getType(itemRef));
     }
     if (typeRef.kind === TypeKind.NON_NULL) {
-      var nullableRef = ((typeRef: any): IntrospectionNonNullTypeRef).ofType;
+      const nullableRef = ((typeRef: any): IntrospectionNonNullTypeRef).ofType;
       if (!nullableRef) {
         throw new Error('Decorated type deeper than introspection query.');
       }
-      let nullableType = getType(nullableRef);
-      return new GraphQLNonNull(((nullableType: any): GraphQLNullableType));
+      const nullableType = getType(nullableRef);
+      invariant(
+        !(nullableType instanceof GraphQLNonNull),
+        'No nesting nonnull.'
+      );
+      return new GraphQLNonNull(nullableType);
     }
     return getNamedType(typeRef.name);
   }
@@ -121,42 +124,42 @@ export function buildClientSchema(
     if (typeDefCache[typeName]) {
       return typeDefCache[typeName];
     }
-    var typeIntrospection = typeIntrospectionMap[typeName];
+    const typeIntrospection = typeIntrospectionMap[typeName];
     if (!typeIntrospection) {
       throw new Error(
         `Invalid or incomplete schema, unknown type: ${typeName}. Ensure ` +
-        `that a full introspection query is used in order to build a ` +
-        `client schema.`
+        'that a full introspection query is used in order to build a ' +
+        'client schema.'
       );
     }
-    var typeDef = buildType(typeIntrospection);
+    const typeDef = buildType(typeIntrospection);
     typeDefCache[typeName] = typeDef;
     return typeDef;
   }
 
   function getInputType(typeRef: IntrospectionTypeRef): GraphQLInputType {
-    var type = getType(typeRef);
+    const type = getType(typeRef);
     invariant(
       isInputType(type),
-      `Introspection must provide input type for arguments.`
+      'Introspection must provide input type for arguments.'
     );
     return (type: any);
   }
 
   function getOutputType(typeRef: IntrospectionTypeRef): GraphQLOutputType {
-    var type = getType(typeRef);
+    const type = getType(typeRef);
     invariant(
       isOutputType(type),
-      `Introspection must provide output type for fields.`
+      'Introspection must provide output type for fields.'
     );
     return (type: any);
   }
 
   function getObjectType(typeRef: IntrospectionTypeRef): GraphQLObjectType {
-    var type = getType(typeRef);
+    const type = getType(typeRef);
     invariant(
       type instanceof GraphQLObjectType,
-      `Introspection must provide object type for possibleTypes.`
+      'Introspection must provide object type for possibleTypes.'
     );
     return (type: any);
   }
@@ -164,10 +167,10 @@ export function buildClientSchema(
   function getInterfaceType(
     typeRef: IntrospectionTypeRef
   ): GraphQLInterfaceType {
-    var type = getType(typeRef);
+    const type = getType(typeRef);
     invariant(
       type instanceof GraphQLInterfaceType,
-      `Introspection must provide interface type for interfaces.`
+      'Introspection must provide interface type for interfaces.'
     );
     return (type: any);
   }
@@ -192,8 +195,8 @@ export function buildClientSchema(
       default:
         throw new Error(
           `Invalid or incomplete schema, unknown kind: ${type.kind}. Ensure ` +
-          `that a full introspection query is used in order to build a ` +
-          `client schema.`
+          'that a full introspection query is used in order to build a ' +
+          'client schema.'
         );
     }
   }
@@ -278,7 +281,7 @@ export function buildClientSchema(
     });
   }
 
-  function buildFieldDefMap(typeIntrospection): any {
+  function buildFieldDefMap(typeIntrospection) {
     return keyValMap(
       typeIntrospection.fields,
       fieldIntrospection => fieldIntrospection.name,
@@ -303,8 +306,8 @@ export function buildClientSchema(
   }
 
   function buildInputValue(inputValueIntrospection) {
-    var type = getInputType(inputValueIntrospection.type);
-    var defaultValue = inputValueIntrospection.defaultValue ?
+    const type = getInputType(inputValueIntrospection.type);
+    const defaultValue = inputValueIntrospection.defaultValue ?
       valueFromAST(parseValue(inputValueIntrospection.defaultValue), type) :
       null;
     return {
@@ -333,19 +336,19 @@ export function buildClientSchema(
   );
 
   // Get the root Query, Mutation, and Subscription types.
-  var queryType = getObjectType(schemaIntrospection.queryType);
+  const queryType = getObjectType(schemaIntrospection.queryType);
 
-  var mutationType = schemaIntrospection.mutationType ?
+  const mutationType = schemaIntrospection.mutationType ?
     getObjectType(schemaIntrospection.mutationType) :
     null;
 
-  var subscriptionType = schemaIntrospection.subscriptionType ?
+  const subscriptionType = schemaIntrospection.subscriptionType ?
     getObjectType(schemaIntrospection.subscriptionType) :
     null;
 
   // Get the directives supported by Introspection, assuming empty-set if
   // directives were not queried for.
-  var directives = schemaIntrospection.directives ?
+  const directives = schemaIntrospection.directives ?
     schemaIntrospection.directives.map(buildDirective) :
     [];
 

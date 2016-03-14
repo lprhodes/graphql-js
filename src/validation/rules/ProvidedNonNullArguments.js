@@ -12,21 +12,22 @@ import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
 import keyMap from '../../jsutils/keyMap';
 import { GraphQLNonNull } from '../../type/definition';
+import type { GraphQLType } from '../../type/definition';
 
 
 export function missingFieldArgMessage(
-  fieldName: any,
-  argName: any,
-  type: any
+  fieldName: string,
+  argName: string,
+  type: GraphQLType
 ): string {
   return `Field "${fieldName}" argument "${argName}" of type "${type}" ` +
-    `is required but not provided.`;
+    'is required but not provided.';
 }
 
 export function missingDirectiveArgMessage(
-  directiveName: any,
-  argName: any,
-  type: any
+  directiveName: string,
+  argName: string,
+  type: GraphQLType
 ): string {
   return `Directive "@${directiveName}" argument "${argName}" of type ` +
     `"${type}" is required but not provided.`;
@@ -43,15 +44,15 @@ export function ProvidedNonNullArguments(context: ValidationContext): any {
     Field: {
       // Validate on leave to allow for deeper errors to appear first.
       leave(fieldAST) {
-        var fieldDef = context.getFieldDef();
+        const fieldDef = context.getFieldDef();
         if (!fieldDef) {
           return false;
         }
-        var argASTs = fieldAST.arguments || [];
+        const argASTs = fieldAST.arguments || [];
 
-        var argASTMap = keyMap(argASTs, arg => arg.name.value);
+        const argASTMap = keyMap(argASTs, arg => arg.name.value);
         fieldDef.args.forEach(argDef => {
-          var argAST = argASTMap[argDef.name];
+          const argAST = argASTMap[argDef.name];
           if (!argAST && argDef.type instanceof GraphQLNonNull) {
             context.reportError(new GraphQLError(
               missingFieldArgMessage(
@@ -69,15 +70,15 @@ export function ProvidedNonNullArguments(context: ValidationContext): any {
     Directive: {
       // Validate on leave to allow for deeper errors to appear first.
       leave(directiveAST) {
-        var directiveDef = context.getDirective();
+        const directiveDef = context.getDirective();
         if (!directiveDef) {
           return false;
         }
-        var argASTs = directiveAST.arguments || [];
+        const argASTs = directiveAST.arguments || [];
 
-        var argASTMap = keyMap(argASTs, arg => arg.name.value);
+        const argASTMap = keyMap(argASTs, arg => arg.name.value);
         directiveDef.args.forEach(argDef => {
-          var argAST = argASTMap[argDef.name];
+          const argAST = argASTMap[argDef.name];
           if (!argAST && argDef.type instanceof GraphQLNonNull) {
             context.reportError(new GraphQLError(
               missingDirectiveArgMessage(

@@ -18,7 +18,7 @@ import { join } from 'path';
 describe('Parser', () => {
 
   it('accepts option to not include source', () => {
-    expect(parse(`{ field }`, { noSource: true })).to.deep.equal({
+    expect(parse('{ field }', { noSource: true })).to.deep.equal({
       kind: 'Document',
       loc: { start: 0, end: 9 },
       definitions:
@@ -47,7 +47,7 @@ describe('Parser', () => {
 
   it('parse provides useful errors', () => {
 
-    var caughtError;
+    let caughtError;
     try {
       parse('{');
     } catch (error) {
@@ -148,7 +148,7 @@ fragment MissingOn Type
     });
   });
 
-  var kitchenSink = readFileSync(
+  const kitchenSink = readFileSync(
     join(__dirname, '/kitchen-sink.graphql'),
     { encoding: 'utf8' }
   );
@@ -220,14 +220,14 @@ fragment ${fragmentName} on Type {
 
   it('parse creates ast', () => {
 
-    var source = new Source(`{
+    const source = new Source(`{
   node(id: 4) {
     id,
     name
   }
 }
 `);
-    var result = parse(source);
+    const result = parse(source);
 
     expect(result).to.deep.equal(
       { kind: Kind.DOCUMENT,

@@ -17,8 +17,8 @@ import { typeFromAST } from '../../utilities/typeFromAST';
 
 
 export function nonInputTypeOnVarMessage(
-  variableName: any,
-  typeName: any
+  variableName: string,
+  typeName: string
 ): string {
   return `Variable "$${variableName}" cannot be non-input type "${typeName}".`;
 }
@@ -32,11 +32,11 @@ export function nonInputTypeOnVarMessage(
 export function VariablesAreInputTypes(context: ValidationContext): any {
   return {
     VariableDefinition(node: VariableDefinition): ?GraphQLError {
-      var type = typeFromAST(context.getSchema(), node.type);
+      const type = typeFromAST(context.getSchema(), node.type);
 
       // If the variable type is not an input type, return an error.
       if (type && !isInputType(type)) {
-        var variableName = node.variable.name.value;
+        const variableName = node.variable.name.value;
         context.reportError(new GraphQLError(
           nonInputTypeOnVarMessage(variableName, print(node.type)),
           [ node.type ]

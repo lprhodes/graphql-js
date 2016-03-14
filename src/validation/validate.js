@@ -58,7 +58,7 @@ export function validate(
     'Schema must be an instance of GraphQLSchema. Also ensure that there are ' +
     'not multiple versions of GraphQL installed in your node_modules directory.'
   );
-  var typeInfo = new TypeInfo(schema);
+  const typeInfo = new TypeInfo(schema);
   return visitUsingRules(schema, typeInfo, ast, rules || specifiedRules);
 }
 
@@ -129,7 +129,7 @@ export class ValidationContext {
   }
 
   getFragment(name: string): ?FragmentDefinition {
-    var fragments = this._fragments;
+    let fragments = this._fragments;
     if (!fragments) {
       this._fragments = fragments =
         this.getDocument().definitions.reduce((frags, statement) => {
@@ -194,14 +194,15 @@ export class ValidationContext {
   getVariableUsages(node: HasSelectionSet): Array<VariableUsage> {
     let usages = this._variableUsages.get(node);
     if (!usages) {
-      usages = [];
+      const newUsages = [];
       const typeInfo = new TypeInfo(this._schema);
       visit(node, visitWithTypeInfo(typeInfo, {
         VariableDefinition: () => false,
         Variable(variable) {
-          usages.push({ node: variable, type: typeInfo.getInputType() });
+          newUsages.push({ node: variable, type: typeInfo.getInputType() });
         }
       }));
+      usages = newUsages;
       this._variableUsages.set(node, usages);
     }
     return usages;

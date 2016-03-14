@@ -17,7 +17,7 @@ export function print(ast) {
   return visit(ast, { leave: printDocASTReducer });
 }
 
-var printDocASTReducer = {
+const printDocASTReducer = {
   Name: node => node.value,
   Variable: node => '$' + node.name,
 
@@ -26,13 +26,16 @@ var printDocASTReducer = {
   Document: node => join(node.definitions, '\n\n') + '\n',
 
   OperationDefinition(node) {
-    var op = node.operation;
-    var name = node.name;
-    var defs = wrap('(', join(node.variableDefinitions, ', '), ')');
-    var directives = join(node.directives, ' ');
-    var selectionSet = node.selectionSet;
-    return !name ? selectionSet :
-      join([ op, join([ name, defs ]), directives, selectionSet ], ' ');
+    const op = node.operation;
+    const name = node.name;
+    const varDefs = wrap('(', join(node.variableDefinitions, ', '), ')');
+    const directives = join(node.directives, ' ');
+    const selectionSet = node.selectionSet;
+    // Anonymous queries with no directives or variable definitions can use
+    // the query short form.
+    return !name && !directives && !varDefs && op === 'query' ?
+      selectionSet :
+      join([ op, join([ name, varDefs ]), directives, selectionSet ], ' ');
   },
 
   VariableDefinition: ({ variable, type, defaultValue }) =>

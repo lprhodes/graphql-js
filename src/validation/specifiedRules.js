@@ -44,6 +44,9 @@ import { PossibleFragmentSpreads } from './rules/PossibleFragmentSpreads';
 // Spec Section: "Fragments must not form cycles"
 import { NoFragmentCycles } from './rules/NoFragmentCycles';
 
+// Spec Section: "Variable Uniqueness"
+import { UniqueVariableNames } from './rules/UniqueVariableNames';
+
 // Spec Section: "All Variable Used Defined"
 import { NoUndefinedVariables } from './rules/NoUndefinedVariables';
 
@@ -79,11 +82,12 @@ import {
 // Spec Section: "Input Object Field Uniqueness"
 import { UniqueInputFieldNames } from './rules/UniqueInputFieldNames';
 
+import type { ValidationContext } from './index';
 
 /**
  * This set includes all validation rules defined by the GraphQL spec.
  */
-export var specifiedRules = [
+export const specifiedRules: Array<(context: ValidationContext) => any> = [
   UniqueOperationNames,
   LoneAnonymousOperation,
   KnownTypeNames,
@@ -96,6 +100,7 @@ export var specifiedRules = [
   NoUnusedFragments,
   PossibleFragmentSpreads,
   NoFragmentCycles,
+  UniqueVariableNames,
   NoUndefinedVariables,
   NoUnusedVariables,
   KnownDirectives,

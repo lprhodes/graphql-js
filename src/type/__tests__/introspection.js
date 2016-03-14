@@ -28,7 +28,7 @@ import { introspectionQuery } from '../../utilities/introspectionQuery';
 
 describe('Introspection', () => {
   it('executes an introspection query', async () => {
-    var EmptySchema = new GraphQLSchema({
+    const EmptySchema = new GraphQLSchema({
       query: new GraphQLObjectType({
         name: 'QueryRoot',
         fields: {
@@ -766,7 +766,7 @@ describe('Introspection', () => {
 
   it('introspects on input object', async () => {
 
-    var TestInputObject = new GraphQLInputObjectType({
+    const TestInputObject = new GraphQLInputObjectType({
       name: 'TestInputObject',
       fields: {
         a: { type: GraphQLString, defaultValue: 'foo' },
@@ -774,7 +774,7 @@ describe('Introspection', () => {
       }
     });
 
-    var TestType = new GraphQLObjectType({
+    const TestType = new GraphQLObjectType({
       name: 'TestType',
       fields: {
         field: {
@@ -785,8 +785,8 @@ describe('Introspection', () => {
       }
     });
 
-    var schema = new GraphQLSchema({ query: TestType });
-    var request = `
+    const schema = new GraphQLSchema({ query: TestType });
+    const request = `
       {
         __schema {
           types {
@@ -847,7 +847,7 @@ describe('Introspection', () => {
   });
 
   it('supports the __type root field', async () => {
-    var TestType = new GraphQLObjectType({
+    const TestType = new GraphQLObjectType({
       name: 'TestType',
       fields: {
         testField: {
@@ -856,8 +856,8 @@ describe('Introspection', () => {
       }
     });
 
-    var schema = new GraphQLSchema({ query: TestType });
-    var request = `
+    const schema = new GraphQLSchema({ query: TestType });
+    const request = `
       {
         __type(name: "TestType") {
           name
@@ -878,7 +878,7 @@ describe('Introspection', () => {
 
   it('identifies deprecated fields', async () => {
 
-    var TestType = new GraphQLObjectType({
+    const TestType = new GraphQLObjectType({
       name: 'TestType',
       fields: {
         nonDeprecated: {
@@ -891,8 +891,8 @@ describe('Introspection', () => {
       }
     });
 
-    var schema = new GraphQLSchema({ query: TestType });
-    var request = `
+    const schema = new GraphQLSchema({ query: TestType });
+    const request = `
       {
         __type(name: "TestType") {
           name
@@ -930,7 +930,7 @@ describe('Introspection', () => {
 
   it('respects the includeDeprecated parameter for fields', async () => {
 
-    var TestType = new GraphQLObjectType({
+    const TestType = new GraphQLObjectType({
       name: 'TestType',
       fields: {
         nonDeprecated: {
@@ -943,8 +943,8 @@ describe('Introspection', () => {
       }
     });
 
-    var schema = new GraphQLSchema({ query: TestType });
-    var request = `
+    const schema = new GraphQLSchema({ query: TestType });
+    const request = `
       {
         __type(name: "TestType") {
           name
@@ -992,7 +992,7 @@ describe('Introspection', () => {
 
   it('identifies deprecated enum values', async () => {
 
-    var TestEnum = new GraphQLEnumType({
+    const TestEnum = new GraphQLEnumType({
       name: 'TestEnum',
       values: {
         NONDEPRECATED: { value: 0 },
@@ -1001,7 +1001,7 @@ describe('Introspection', () => {
       }
     });
 
-    var TestType = new GraphQLObjectType({
+    const TestType = new GraphQLObjectType({
       name: 'TestType',
       fields: {
         testEnum: {
@@ -1010,8 +1010,8 @@ describe('Introspection', () => {
       }
     });
 
-    var schema = new GraphQLSchema({ query: TestType });
-    var request = `
+    const schema = new GraphQLSchema({ query: TestType });
+    const request = `
       {
         __type(name: "TestEnum") {
           name
@@ -1054,7 +1054,7 @@ describe('Introspection', () => {
 
   it('respects the includeDeprecated parameter for enum values', async () => {
 
-    var TestEnum = new GraphQLEnumType({
+    const TestEnum = new GraphQLEnumType({
       name: 'TestEnum',
       values: {
         NONDEPRECATED: { value: 0 },
@@ -1063,7 +1063,7 @@ describe('Introspection', () => {
       }
     });
 
-    var TestType = new GraphQLObjectType({
+    const TestType = new GraphQLObjectType({
       name: 'TestType',
       fields: {
         testEnum: {
@@ -1072,8 +1072,8 @@ describe('Introspection', () => {
       }
     });
 
-    var schema = new GraphQLSchema({ query: TestType });
-    var request = `
+    const schema = new GraphQLSchema({ query: TestType });
+    const request = `
       {
         __type(name: "TestEnum") {
           name
@@ -1129,7 +1129,7 @@ describe('Introspection', () => {
   });
 
   it('fails as expected on the __type root field without an arg', async () => {
-    var TestType = new GraphQLObjectType({
+    const TestType = new GraphQLObjectType({
       name: 'TestType',
       fields: {
         testField: {
@@ -1138,8 +1138,8 @@ describe('Introspection', () => {
       }
     });
 
-    var schema = new GraphQLSchema({ query: TestType });
-    var request = `
+    const schema = new GraphQLSchema({ query: TestType });
+    const request = `
       {
         __type {
           name
@@ -1158,15 +1158,15 @@ describe('Introspection', () => {
   });
 
   it('exposes descriptions on types and fields', async () => {
-    var QueryRoot = new GraphQLObjectType({
+    const QueryRoot = new GraphQLObjectType({
       name: 'QueryRoot',
       fields: {
         onlyField: { type: GraphQLString }
       }
     });
 
-    var schema = new GraphQLSchema({ query: QueryRoot });
-    var request = `
+    const schema = new GraphQLSchema({ query: QueryRoot });
+    const request = `
       {
         schemaType: __type(name: "__Schema") {
           name,
@@ -1220,15 +1220,15 @@ describe('Introspection', () => {
   });
 
   it('exposes descriptions on enums', async () => {
-    var QueryRoot = new GraphQLObjectType({
+    const QueryRoot = new GraphQLObjectType({
       name: 'QueryRoot',
       fields: {
         onlyField: { type: GraphQLString }
       }
     });
 
-    var schema = new GraphQLSchema({ query: QueryRoot });
-    var request = `
+    const schema = new GraphQLSchema({ query: QueryRoot });
+    const request = `
       {
         typeKindType: __type(name: "__TypeKind") {
           name,

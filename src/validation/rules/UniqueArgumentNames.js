@@ -12,7 +12,7 @@ import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
 
 
-export function duplicateArgMessage(argName: any): string {
+export function duplicateArgMessage(argName: string): string {
   return `There can be only one argument named "${argName}".`;
 }
 
@@ -23,7 +23,7 @@ export function duplicateArgMessage(argName: any): string {
  * uniquely named.
  */
 export function UniqueArgumentNames(context: ValidationContext): any {
-  var knownArgNames = Object.create(null);
+  let knownArgNames = Object.create(null);
   return {
     Field() {
       knownArgNames = Object.create(null);
@@ -32,7 +32,7 @@ export function UniqueArgumentNames(context: ValidationContext): any {
       knownArgNames = Object.create(null);
     },
     Argument(node) {
-      var argName = node.name.value;
+      const argName = node.name.value;
       if (knownArgNames[argName]) {
         context.reportError(new GraphQLError(
           duplicateArgMessage(argName),

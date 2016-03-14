@@ -112,7 +112,7 @@ export function extendSchema(
         if (schema.getType(typeName)) {
           throw new GraphQLError(
             `Type "${typeName}" already exists in the schema. It cannot also ` +
-            `be defined in this type definition.`,
+            'be defined in this type definition.',
             [ def ]
           );
         }
@@ -126,7 +126,7 @@ export function extendSchema(
         if (!existingType) {
           throw new GraphQLError(
             `Cannot extend type "${extendedTypeName}" because it does not ` +
-            `exist in the existing schema.`,
+            'exist in the existing schema.',
             [ def.definition ]
           );
         }
@@ -157,7 +157,7 @@ export function extendSchema(
   // A cache to use to store the actual GraphQLType definition objects by name.
   // Initialize to the GraphQL built in scalars. All functions below are inline
   // so that this type def cache is within the scope of the closure.
-  let typeDefCache = {
+  const typeDefCache = {
     String: GraphQLString,
     Int: GraphQLInt,
     Float: GraphQLFloat,
@@ -212,7 +212,7 @@ export function extendSchema(
     if (!type) {
       throw new GraphQLError(
         `Unknown type: "${astNode.name.value}". Ensure that this type exists ` +
-        `either in the original schema, or is added in a type definition.`,
+        'either in the original schema, or is added in a type definition.',
         [ astNode ]
       );
     }
@@ -299,8 +299,8 @@ export function extendSchema(
           const interfaceName = namedType.name.value;
           if (interfaces.some(def => def.name === interfaceName)) {
             throw new GraphQLError(
-              `'Type "${type.name}" already implements "${interfaceName}". ` +
-              `It cannot also be implemented in this type extension.`,
+              `Type "${type.name}" already implements "${interfaceName}". ` +
+              'It cannot also be implemented in this type extension.',
               [ namedType ]
             );
           }
@@ -335,7 +335,7 @@ export function extendSchema(
           if (oldFieldMap[fieldName]) {
             throw new GraphQLError(
               `Field "${type.name}.${fieldName}" already exists in the ` +
-              `schema. It cannot also be defined in this type extension.`,
+              'schema. It cannot also be defined in this type extension.',
               [ field ]
             );
           }

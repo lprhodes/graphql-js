@@ -12,7 +12,7 @@ import type { ValidationContext } from '../index';
 import { GraphQLError } from '../../error';
 
 
-export function duplicateFragmentNameMessage(fragName: any): string {
+export function duplicateFragmentNameMessage(fragName: string): string {
   return `There can only be one fragment named "${fragName}".`;
 }
 
@@ -22,11 +22,11 @@ export function duplicateFragmentNameMessage(fragName: any): string {
  * A GraphQL document is only valid if all defined fragments have unique names.
  */
 export function UniqueFragmentNames(context: ValidationContext): any {
-  var knownFragmentNames = Object.create(null);
+  const knownFragmentNames = Object.create(null);
   return {
     OperationDefinition: () => false,
     FragmentDefinition(node) {
-      var fragmentName = node.name.value;
+      const fragmentName = node.name.value;
       if (knownFragmentNames[fragmentName]) {
         context.reportError(new GraphQLError(
           duplicateFragmentNameMessage(fragmentName),

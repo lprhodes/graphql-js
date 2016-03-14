@@ -44,6 +44,7 @@ export type Node = Name
                  | ObjectValue
                  | ObjectField
                  | Directive
+                 | NamedType
                  | ListType
                  | NonNullType
                  | ObjectTypeDefinition
@@ -76,6 +77,7 @@ export type Document = {
 export type Definition = OperationDefinition
                        | FragmentDefinition
                        | TypeDefinition
+                       | TypeExtensionDefinition
 
 export type OperationDefinition = {
   kind: 'OperationDefinition';
@@ -260,7 +262,6 @@ export type TypeDefinition = ObjectTypeDefinition
                            | ScalarTypeDefinition
                            | EnumTypeDefinition
                            | InputObjectTypeDefinition
-                           | TypeExtensionDefinition
 
 export type ObjectTypeDefinition = {
   kind: 'ObjectTypeDefinition';
