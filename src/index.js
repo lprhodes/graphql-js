@@ -51,7 +51,7 @@ export {
   GraphQLInputObjectType,
   GraphQLList,
   GraphQLNonNull,
-  GraphQLJson
+  GraphQLJson,
 
   // Scalars
   GraphQLInt,
