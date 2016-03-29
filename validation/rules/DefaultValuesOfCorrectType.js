@@ -7,6 +7,8 @@ exports.defaultForNonNullArgMessage = defaultForNonNullArgMessage;
 exports.badValueForDefaultArgMessage = badValueForDefaultArgMessage;
 exports.DefaultValuesOfCorrectType = DefaultValuesOfCorrectType;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 var _printer = require('../../language/printer');
@@ -15,9 +17,6 @@ var _definition = require('../../type/definition');
 
 var _isValidLiteralValue = require('../../utilities/isValidLiteralValue');
 
-function defaultForNonNullArgMessage(varName, type, guessType) {
-  return 'Variable "$' + varName + '" of type "' + type + '" is required and will not ' + ('use the default value. Perhaps you meant to use type "' + guessType + '".');
-}
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -26,6 +25,10 @@ function defaultForNonNullArgMessage(varName, type, guessType) {
  *  LICENSE file in the root directory of this source tree. An additional grant
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
+
+function defaultForNonNullArgMessage(varName, type, guessType) {
+  return 'Variable "$' + varName + '" of type "' + type + '" is required and will not ' + ('use the default value. Perhaps you meant to use type "' + guessType + '".');
+}
 
 function badValueForDefaultArgMessage(varName, type, value, verboseErrors) {
   var message = verboseErrors ? '\n' + verboseErrors.join('\n') : '';

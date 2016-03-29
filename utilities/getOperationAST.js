@@ -7,11 +7,23 @@ exports.getOperationAST = getOperationAST;
 
 var _kinds = require('../language/kinds');
 
+var _ast = require('../language/ast');
+
 /**
  * Returns an operation AST given a document AST and optionally an operation
  * name. If a name is not provided, an operation is only returned if only one is
  * provided in the document.
  */
+
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
+
 function getOperationAST(documentAST, operationName) {
   var operation = null;
   for (var i = 0; i < documentAST.definitions.length; i++) {
@@ -32,11 +44,3 @@ function getOperationAST(documentAST, operationName) {
   }
   return operation;
 }
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */

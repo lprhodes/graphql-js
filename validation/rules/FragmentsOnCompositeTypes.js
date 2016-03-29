@@ -7,12 +7,17 @@ exports.inlineFragmentOnNonCompositeErrorMessage = inlineFragmentOnNonCompositeE
 exports.fragmentOnNonCompositeErrorMessage = fragmentOnNonCompositeErrorMessage;
 exports.FragmentsOnCompositeTypes = FragmentsOnCompositeTypes;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 var _printer = require('../../language/printer');
 
 var _definition = require('../../type/definition');
 
+function inlineFragmentOnNonCompositeErrorMessage(type) {
+  return 'Fragment cannot condition on non composite type "' + type + '".';
+}
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -21,10 +26,6 @@ var _definition = require('../../type/definition');
  *  LICENSE file in the root directory of this source tree. An additional grant
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
-
-function inlineFragmentOnNonCompositeErrorMessage(type) {
-  return 'Fragment cannot condition on non composite type "' + type + '".';
-}
 
 function fragmentOnNonCompositeErrorMessage(fragName, type) {
   return 'Fragment "' + fragName + '" cannot condition on non composite ' + ('type "' + type + '".');

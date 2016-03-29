@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.concatAST = concatAST;
 
+var _ast = require('../language/ast');
 
 /**
  * Provided a collection of ASTs, presumably each from different files,

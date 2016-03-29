@@ -12,6 +12,16 @@ var _definition = require('../type/definition');
 /**
  * Provided two types, return true if the types are equal (invariant).
  */
+
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
+
 function isEqualType(typeA, typeB) {
   // Equivalent types are equal.
   if (typeA === typeB) {
@@ -36,17 +46,7 @@ function isEqualType(typeA, typeB) {
  * Provided a type and a super type, return true if the first type is either
  * equal or a subset of the second super type (covariant).
  */
-
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
-
-function isTypeSubTypeOf(schema, maybeSubType, superType) {
+function isTypeSubTypeOf(maybeSubType, superType) {
   // Equivalent type is a valid subtype
   if (maybeSubType === superType) {
     return true;
@@ -55,18 +55,18 @@ function isTypeSubTypeOf(schema, maybeSubType, superType) {
   // If superType is non-null, maybeSubType must also be nullable.
   if (superType instanceof _definition.GraphQLNonNull) {
     if (maybeSubType instanceof _definition.GraphQLNonNull) {
-      return isTypeSubTypeOf(schema, maybeSubType.ofType, superType.ofType);
+      return isTypeSubTypeOf(maybeSubType.ofType, superType.ofType);
     }
     return false;
   } else if (maybeSubType instanceof _definition.GraphQLNonNull) {
     // If superType is nullable, maybeSubType may be non-null.
-    return isTypeSubTypeOf(schema, maybeSubType.ofType, superType);
+    return isTypeSubTypeOf(maybeSubType.ofType, superType);
   }
 
   // If superType type is a list, maybeSubType type must also be a list.
   if (superType instanceof _definition.GraphQLList) {
     if (maybeSubType instanceof _definition.GraphQLList) {
-      return isTypeSubTypeOf(schema, maybeSubType.ofType, superType.ofType);
+      return isTypeSubTypeOf(maybeSubType.ofType, superType.ofType);
     }
     return false;
   } else if (maybeSubType instanceof _definition.GraphQLList) {
@@ -76,7 +76,7 @@ function isTypeSubTypeOf(schema, maybeSubType, superType) {
 
   // If superType type is an abstract type, maybeSubType type may be a currently
   // possible object type.
-  if ((0, _definition.isAbstractType)(superType) && maybeSubType instanceof _definition.GraphQLObjectType && schema.isPossibleType(superType, maybeSubType)) {
+  if ((0, _definition.isAbstractType)(superType) && maybeSubType instanceof _definition.GraphQLObjectType && superType.isPossibleType(maybeSubType)) {
     return true;
   }
 
@@ -93,7 +93,7 @@ function isTypeSubTypeOf(schema, maybeSubType, superType) {
  *
  * This function is commutative.
  */
-function doTypesOverlap(schema, typeA, typeB) {
+function doTypesOverlap(typeA, typeB) {
   // So flow is aware this is constant
   var _typeB = typeB;
 
@@ -106,17 +106,17 @@ function doTypesOverlap(schema, typeA, typeB) {
     if (_typeB instanceof _definition.GraphQLInterfaceType || _typeB instanceof _definition.GraphQLUnionType) {
       // If both types are abstract, then determine if there is any intersection
       // between possible concrete types of each.
-      return schema.getPossibleTypes(typeA).some(function (type) {
-        return schema.isPossibleType(_typeB, type);
+      return typeA.getPossibleTypes().some(function (type) {
+        return _typeB.isPossibleType(type);
       });
     }
     // Determine if the latter type is a possible concrete type of the former.
-    return schema.isPossibleType(typeA, _typeB);
+    return typeA.isPossibleType(_typeB);
   }
 
   if (_typeB instanceof _definition.GraphQLInterfaceType || _typeB instanceof _definition.GraphQLUnionType) {
     // Determine if the former type is a possible concrete type of the latter.
-    return schema.isPossibleType(_typeB, typeA);
+    return _typeB.isPossibleType(typeA);
   }
 
   // Otherwise the types do not overlap.

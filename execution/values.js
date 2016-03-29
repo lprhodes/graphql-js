@@ -3,19 +3,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
-var _stringify = require('babel-runtime/core-js/json/stringify');
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
 exports.getVariableValues = getVariableValues;
 exports.getArgumentValues = getArgumentValues;
 
@@ -43,7 +30,21 @@ var _printer = require('../language/printer');
 
 var _definition = require('../type/definition');
 
+var _schema = require('../type/schema');
+
+var _ast = require('../language/ast');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
 
 /**
  * Prepares an object map of variableValues of the correct type based on the
@@ -62,16 +63,6 @@ function getVariableValues(schema, definitionASTs, inputs) {
  * Prepares an object map of argument values given a list of argument
  * definitions and list of argument AST nodes.
  */
-
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
-
 function getArgumentValues(argDefs, argASTs, variableValues) {
   if (!argDefs || !argASTs) {
     return {};
@@ -118,7 +109,7 @@ function getVariableValue(schema, definitionAST, input) {
     throw new _error.GraphQLError('Variable "$' + variable.name.value + '" of required type ' + ('"' + (0, _printer.print)(definitionAST.type) + '" was not provided.'), [definitionAST]);
   }
   var message = errors ? '\n' + errors.join('\n') : '';
-  throw new _error.GraphQLError('Variable "$' + variable.name.value + '" got invalid value ' + ((0, _stringify2.default)(input) + '.' + message), [definitionAST]);
+  throw new _error.GraphQLError('Variable "$' + variable.name.value + '" got invalid value ' + (JSON.stringify(input) + '.' + message), [definitionAST]);
 }
 
 /**
@@ -139,7 +130,7 @@ function coerceValue(type, value) {
   }
 
   if (type instanceof _definition.GraphQLList) {
-    var _ret = function () {
+    var _ret = (function () {
       var itemType = type.ofType;
       // TODO: support iterable input
       if (Array.isArray(_value)) {
@@ -152,21 +143,21 @@ function coerceValue(type, value) {
       return {
         v: [coerceValue(itemType, _value)]
       };
-    }();
+    })();
 
-    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
   }
 
   if (type instanceof _definition.GraphQLInputObjectType) {
-    var _ret2 = function () {
-      if ((typeof _value === 'undefined' ? 'undefined' : (0, _typeof3.default)(_value)) !== 'object' || _value === null) {
+    var _ret2 = (function () {
+      if ((typeof _value === 'undefined' ? 'undefined' : _typeof(_value)) !== 'object' || _value === null) {
         return {
           v: null
         };
       }
       var fields = type.getFields();
       return {
-        v: (0, _keys2.default)(fields).reduce(function (obj, fieldName) {
+        v: Object.keys(fields).reduce(function (obj, fieldName) {
           var field = fields[fieldName];
           var fieldValue = coerceValue(field.type, _value[fieldName]);
           if (fieldValue === undefined) {
@@ -178,9 +169,9 @@ function coerceValue(type, value) {
           return obj;
         }, {})
       };
-    }();
+    })();
 
-    if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+    if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
   }
 
   (0, _invariant2.default)(type instanceof _definition.GraphQLScalarType || type instanceof _definition.GraphQLEnumType, 'Must be input type');

@@ -147,12 +147,3 @@ Object.defineProperty(exports, 'doTypesOverlap', {
     return _typeComparators.doTypesOverlap;
   }
 });
-
-var _assertValidName = require('./assertValidName');
-
-Object.defineProperty(exports, 'assertValidName', {
-  enumerable: true,
-  get: function get() {
-    return _assertValidName.assertValidName;
-  }
-});

@@ -3,11 +3,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
 exports.extendSchema = extendSchema;
 
 var _invariant = require('../jsutils/invariant');
@@ -30,11 +25,11 @@ var _schema = require('../type/schema');
 
 var _definition = require('../type/definition');
 
-var _introspection = require('../type/introspection');
-
 var _scalars = require('../type/scalars');
 
 var _kinds = require('../language/kinds');
+
+var _ast = require('../language/ast');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -50,16 +45,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * This algorithm copies the provided schema, applying extensions while
  * producing the copy. The original schema remains unaltered.
  */
-
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
-
 function extendSchema(schema, documentAST) {
   (0, _invariant2.default)(schema instanceof _schema.GraphQLSchema, 'Must provide valid GraphQLSchema');
 
@@ -110,28 +95,19 @@ function extendSchema(schema, documentAST) {
 
   // If this document contains no new types, then return the same unmodified
   // GraphQLSchema instance.
-  if ((0, _keys2.default)(typeExtensionsMap).length === 0 && (0, _keys2.default)(typeDefinitionMap).length === 0) {
+  if (Object.keys(typeExtensionsMap).length === 0 && Object.keys(typeDefinitionMap).length === 0) {
     return schema;
   }
 
   // A cache to use to store the actual GraphQLType definition objects by name.
-  // Initialize to the GraphQL built in scalars and introspection types. All
-  // functions below are inline so that this type def cache is within the scope
-  // of the closure.
+  // Initialize to the GraphQL built in scalars. All functions below are inline
+  // so that this type def cache is within the scope of the closure.
   var typeDefCache = {
     String: _scalars.GraphQLString,
     Int: _scalars.GraphQLInt,
     Float: _scalars.GraphQLFloat,
     Boolean: _scalars.GraphQLBoolean,
-    ID: _scalars.GraphQLID,
-    __Schema: _introspection.__Schema,
-    __Directive: _introspection.__Directive,
-    __DirectiveLocation: _introspection.__DirectiveLocation,
-    __Type: _introspection.__Type,
-    __Field: _introspection.__Field,
-    __InputValue: _introspection.__InputValue,
-    __EnumValue: _introspection.__EnumValue,
-    __TypeKind: _introspection.__TypeKind
+    ID: _scalars.GraphQLID
   };
 
   // Get the root Query, Mutation, and Subscription types.
@@ -145,13 +121,13 @@ function extendSchema(schema, documentAST) {
 
   // Iterate through all types, getting the type definition for each, ensuring
   // that any type not directly referenced by a field will get created.
-  var types = (0, _keys2.default)(schema.getTypeMap()).map(function (typeName) {
+  Object.keys(schema.getTypeMap()).forEach(function (typeName) {
     return getTypeFromDef(schema.getType(typeName));
   });
 
-  // Do the same with new types, appending to the list of defined types.
-  (0, _keys2.default)(typeDefinitionMap).forEach(function (typeName) {
-    types.push(getTypeFromAST(typeDefinitionMap[typeName]));
+  // Do the same with new types.
+  Object.keys(typeDefinitionMap).forEach(function (typeName) {
+    return getTypeFromAST(typeDefinitionMap[typeName]);
   });
 
   // Then produce and return a Schema with these types.
@@ -159,7 +135,6 @@ function extendSchema(schema, documentAST) {
     query: queryType,
     mutation: mutationType,
     subscription: subscriptionType,
-    types: types,
     // Copy directives.
     directives: schema.getDirectives()
   });
@@ -198,9 +173,9 @@ function extendSchema(schema, documentAST) {
 
     var typeAST = typeDefinitionMap[typeName];
     if (typeAST) {
-      var _typeDef = buildType(typeAST);
-      typeDefCache[typeName] = _typeDef;
-      return _typeDef;
+      var typeDef = buildType(typeAST);
+      typeDefCache[typeName] = typeDef;
+      return typeDef;
     }
   }
 
@@ -239,7 +214,7 @@ function extendSchema(schema, documentAST) {
       fields: function fields() {
         return extendFieldMap(type);
       },
-      resolveType: cannotExecuteClientSchema
+      resolveType: throwClientSchemaExecutionError
     });
   }
 
@@ -247,8 +222,8 @@ function extendSchema(schema, documentAST) {
     return new _definition.GraphQLUnionType({
       name: type.name,
       description: type.description,
-      types: type.getTypes().map(getTypeFromDef),
-      resolveType: cannotExecuteClientSchema
+      types: type.getPossibleTypes().map(getTypeFromDef),
+      resolveType: throwClientSchemaExecutionError
     });
   }
 
@@ -277,7 +252,7 @@ function extendSchema(schema, documentAST) {
   function extendFieldMap(type) {
     var newFieldMap = {};
     var oldFieldMap = type.getFields();
-    (0, _keys2.default)(oldFieldMap).forEach(function (fieldName) {
+    Object.keys(oldFieldMap).forEach(function (fieldName) {
       var field = oldFieldMap[fieldName];
       newFieldMap[fieldName] = {
         description: field.description,
@@ -286,7 +261,7 @@ function extendSchema(schema, documentAST) {
         args: (0, _keyMap2.default)(field.args, function (arg) {
           return arg.name;
         }),
-        resolve: cannotExecuteClientSchema
+        resolve: throwClientSchemaExecutionError
       };
     });
 
@@ -302,7 +277,7 @@ function extendSchema(schema, documentAST) {
           newFieldMap[fieldName] = {
             type: buildFieldType(field.type),
             args: buildInputValues(field.arguments),
-            resolve: cannotExecuteClientSchema
+            resolve: throwClientSchemaExecutionError
           };
         });
       });
@@ -356,7 +331,7 @@ function extendSchema(schema, documentAST) {
       fields: function fields() {
         return buildFieldMap(typeAST);
       },
-      resolveType: cannotExecuteClientSchema
+      resolveType: throwClientSchemaExecutionError
     });
   }
 
@@ -364,7 +339,7 @@ function extendSchema(schema, documentAST) {
     return new _definition.GraphQLUnionType({
       name: typeAST.name.value,
       types: typeAST.types.map(getTypeFromAST),
-      resolveType: cannotExecuteClientSchema
+      resolveType: throwClientSchemaExecutionError
     });
   }
 
@@ -418,7 +393,7 @@ function extendSchema(schema, documentAST) {
       return {
         type: buildFieldType(field.type),
         args: buildInputValues(field.arguments),
-        resolve: cannotExecuteClientSchema
+        resolve: throwClientSchemaExecutionError
       };
     });
   }
@@ -445,7 +420,15 @@ function extendSchema(schema, documentAST) {
     return getTypeFromAST(typeAST);
   }
 }
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
 
-function cannotExecuteClientSchema() {
+function throwClientSchemaExecutionError() {
   throw new Error('Client Schema cannot be used for execution.');
 }

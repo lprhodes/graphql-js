@@ -3,18 +3,19 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _create = require('babel-runtime/core-js/object/create');
-
-var _create2 = _interopRequireDefault(_create);
-
 exports.cycleErrorMessage = cycleErrorMessage;
 exports.NoFragmentCycles = NoFragmentCycles;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _ast = require('../../language/ast');
 
+function cycleErrorMessage(fragName, spreadNames) {
+  var via = spreadNames.length ? ' via ' + spreadNames.join(', ') : '';
+  return 'Cannot spread fragment "' + fragName + '" within itself' + via + '.';
+}
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -24,21 +25,16 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
 
-function cycleErrorMessage(fragName, spreadNames) {
-  var via = spreadNames.length ? ' via ' + spreadNames.join(', ') : '';
-  return 'Cannot spread fragment "' + fragName + '" within itself' + via + '.';
-}
-
 function NoFragmentCycles(context) {
   // Tracks already visited fragments to maintain O(N) and to ensure that cycles
   // are not redundantly reported.
-  var visitedFrags = (0, _create2.default)(null);
+  var visitedFrags = Object.create(null);
 
   // Array of AST nodes used to produce meaningful errors
   var spreadPath = [];
 
   // Position in the spread path
-  var spreadPathIndexByName = (0, _create2.default)(null);
+  var spreadPathIndexByName = Object.create(null);
 
   return {
     OperationDefinition: function OperationDefinition() {

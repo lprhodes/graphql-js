@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.anonOperationNotAloneMessage = anonOperationNotAloneMessage;
 exports.LoneAnonymousOperation = LoneAnonymousOperation;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 var _kinds = require('../../language/kinds');

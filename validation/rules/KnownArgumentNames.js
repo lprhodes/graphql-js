@@ -7,6 +7,8 @@ exports.unknownArgMessage = unknownArgMessage;
 exports.unknownDirectiveArgMessage = unknownDirectiveArgMessage;
 exports.KnownArgumentNames = KnownArgumentNames;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 var _find = require('../../jsutils/find');
@@ -19,11 +21,10 @@ var _invariant2 = _interopRequireDefault(_invariant);
 
 var _kinds = require('../../language/kinds');
 
+var _definition = require('../../type/definition');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function unknownArgMessage(argName, fieldName, type) {
-  return 'Unknown argument "' + argName + '" on field "' + fieldName + '" of ' + ('type "' + type + '".');
-}
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -32,6 +33,10 @@ function unknownArgMessage(argName, fieldName, type) {
  *  LICENSE file in the root directory of this source tree. An additional grant
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
+
+function unknownArgMessage(argName, fieldName, type) {
+  return 'Unknown argument "' + argName + '" on field "' + fieldName + '" of ' + ('type "' + type + '".');
+}
 
 function unknownDirectiveArgMessage(argName, directiveName) {
   return 'Unknown argument "' + argName + '" on directive "@' + directiveName + '".';

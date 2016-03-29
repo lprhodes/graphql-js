@@ -3,19 +3,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _stringify = require('babel-runtime/core-js/json/stringify');
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
 exports.astFromValue = astFromValue;
 
 var _invariant = require('../jsutils/invariant');
@@ -26,6 +13,8 @@ var _isNullish = require('../jsutils/isNullish');
 
 var _isNullish2 = _interopRequireDefault(_isNullish);
 
+var _ast = require('../language/ast');
+
 var _kinds = require('../language/kinds');
 
 var _definition = require('../type/definition');
@@ -33,6 +22,16 @@ var _definition = require('../type/definition');
 var _scalars = require('../type/scalars');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
 
 /**
  * Produces a GraphQL Value AST given a JavaScript value.
@@ -66,7 +65,7 @@ function astFromValue(value, type) {
   // Convert JavaScript array to GraphQL list. If the GraphQLType is a list, but
   // the value is not an array, convert the value using the list's item type.
   if (Array.isArray(_value)) {
-    var _ret = function () {
+    var _ret = (function () {
       var itemType = type instanceof _definition.GraphQLList ? type.ofType : null;
       return {
         v: {
@@ -78,9 +77,9 @@ function astFromValue(value, type) {
           })
         }
       };
-    }();
+    })();
 
-    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
   } else if (type instanceof _definition.GraphQLList) {
     // Because GraphQL will accept single values as a "list of one" when
     // expecting a list, if there's a non-array value and an expected list type,
@@ -115,17 +114,17 @@ function astFromValue(value, type) {
     }
     // Use JSON stringify, which uses the same string encoding as GraphQL,
     // then remove the quotes.
-    return { kind: _kinds.STRING, value: (0, _stringify2.default)(_value).slice(1, -1) };
+    return { kind: _kinds.STRING, value: JSON.stringify(_value).slice(1, -1) };
   }
 
   // last remaining possible typeof
-  (0, _invariant2.default)((typeof _value === 'undefined' ? 'undefined' : (0, _typeof3.default)(_value)) === 'object' && _value !== null);
+  (0, _invariant2.default)((typeof _value === 'undefined' ? 'undefined' : _typeof(_value)) === 'object' && _value !== null);
 
   // Populate the fields of the input object by creating ASTs from each value
   // in the JavaScript object.
   var fields = [];
-  (0, _keys2.default)(_value).forEach(function (fieldName) {
-    var fieldType = void 0;
+  Object.keys(_value).forEach(function (fieldName) {
+    var fieldType = undefined;
     if (type instanceof _definition.GraphQLInputObjectType) {
       var fieldDef = type.getFields()[fieldName];
       fieldType = fieldDef && fieldDef.type;
@@ -141,11 +140,3 @@ function astFromValue(value, type) {
   });
   return { kind: _kinds.OBJECT, fields: fields };
 }
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */

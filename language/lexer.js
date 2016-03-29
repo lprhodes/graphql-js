@@ -4,18 +4,13 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.TokenKind = undefined;
-
-var _stringify = require('babel-runtime/core-js/json/stringify');
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
 exports.lex = lex;
 exports.getTokenDesc = getTokenDesc;
 exports.getTokenKindDesc = getTokenKindDesc;
 
-var _error = require('../error');
+var _source = require('./source');
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _error = require('../error');
 
 /**
  * Given a Source object, this returns a Lexer for that source.
@@ -28,7 +23,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * The argument to the lexer function is optional, and can be used to
  * rewind or fast forward the lexer to a new position in the source.
  */
-
 
 /**
  * A representation of a lexed Token. Value only appears for non-punctuation
@@ -126,7 +120,7 @@ function printCharCode(code) {
     // NaN/undefined represents access beyond the end of the file.
     isNaN(code) ? '<EOF>' :
     // Trust JSON for ASCII.
-    code < 0x007F ? (0, _stringify2.default)(String.fromCharCode(code)) :
+    code < 0x007F ? JSON.stringify(String.fromCharCode(code)) :
     // Otherwise print the escaped form.
     '"\\u' + ('00' + code.toString(16).toUpperCase()).slice(-4) + '"'
   );

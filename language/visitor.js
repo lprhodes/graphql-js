@@ -1,24 +1,13 @@
 'use strict';
 
+var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.BREAK = exports.QueryDocumentKeys = undefined;
-
-var _stringify = require('babel-runtime/core-js/json/stringify');
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
-var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
-
-var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
-
 exports.visit = visit;
 exports.visitInParallel = visitInParallel;
 exports.visitWithTypeInfo = visitWithTypeInfo;
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -58,22 +47,16 @@ var QueryDocumentKeys = exports.QueryDocumentKeys = {
   ListType: ['type'],
   NonNullType: ['type'],
 
-  SchemaDefinition: ['operationTypes'],
-  OperationTypeDefinition: ['type'],
-
-  ScalarTypeDefinition: ['name'],
   ObjectTypeDefinition: ['name', 'interfaces', 'fields'],
   FieldDefinition: ['name', 'arguments', 'type'],
   InputValueDefinition: ['name', 'type', 'defaultValue'],
   InterfaceTypeDefinition: ['name', 'fields'],
   UnionTypeDefinition: ['name', 'types'],
+  ScalarTypeDefinition: ['name'],
   EnumTypeDefinition: ['name', 'values'],
   EnumValueDefinition: ['name'],
   InputObjectTypeDefinition: ['name', 'fields'],
-
-  TypeExtensionDefinition: ['definition'],
-
-  DirectiveDefinition: ['name', 'arguments', 'locations']
+  TypeExtensionDefinition: ['definition']
 };
 
 var BREAK = exports.BREAK = {};
@@ -167,12 +150,12 @@ var BREAK = exports.BREAK = {};
 function visit(root, visitor, keyMap) {
   var visitorKeys = keyMap || QueryDocumentKeys;
 
-  var stack = void 0;
+  var stack = undefined;
   var inArray = Array.isArray(root);
   var keys = [root];
   var index = -1;
   var edits = [];
-  var parent = void 0;
+  var parent = undefined;
   var path = [];
   var ancestors = [];
   var newRoot = root;
@@ -180,8 +163,8 @@ function visit(root, visitor, keyMap) {
   do {
     index++;
     var isLeaving = index === keys.length;
-    var key = void 0;
-    var node = void 0;
+    var key = undefined;
+    var node = undefined;
     var isEdited = isLeaving && edits.length !== 0;
     if (isLeaving) {
       key = ancestors.length === 0 ? undefined : path.pop();
@@ -201,11 +184,11 @@ function visit(root, visitor, keyMap) {
         }
         var editOffset = 0;
         for (var ii = 0; ii < edits.length; ii++) {
-          var _edits$ii = (0, _slicedToArray3.default)(edits[ii], 1);
+          var _edits$ii = _slicedToArray(edits[ii], 1);
 
           var editKey = _edits$ii[0];
 
-          var _edits$ii2 = (0, _slicedToArray3.default)(edits[ii], 2);
+          var _edits$ii2 = _slicedToArray(edits[ii], 2);
 
           var editValue = _edits$ii2[1];
 
@@ -236,10 +219,10 @@ function visit(root, visitor, keyMap) {
       }
     }
 
-    var result = void 0;
+    var result = undefined;
     if (!Array.isArray(node)) {
       if (!isNode(node)) {
-        throw new Error('Invalid AST Node: ' + (0, _stringify2.default)(node));
+        throw new Error('Invalid AST Node: ' + JSON.stringify(node));
       }
       var visitFn = getVisitFn(visitor, node.kind, isLeaving);
       if (visitFn) {
@@ -365,7 +348,7 @@ function visitWithTypeInfo(typeInfo, visitor) {
     },
     leave: function leave(node) {
       var fn = getVisitFn(visitor, node.kind, /* isLeaving */true);
-      var result = void 0;
+      var result = undefined;
       if (fn) {
         result = fn.apply(visitor, arguments);
       }

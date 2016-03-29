@@ -3,11 +3,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
 exports.printSchema = printSchema;
 exports.printIntrospectionSchema = printIntrospectionSchema;
 
@@ -23,14 +18,14 @@ var _astFromValue = require('../utilities/astFromValue');
 
 var _printer = require('../language/printer');
 
+var _schema = require('../type/schema');
+
 var _definition = require('../type/definition');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function printSchema(schema) {
-  return printFilteredSchema(schema, function (n) {
-    return !isSpecDirective(n);
-  }, isDefinedType);
+  return printFilteredSchema(schema, isDefinedType);
 }
 /**
  *  Copyright (c) 2015, Facebook, Inc.
@@ -42,11 +37,7 @@ function printSchema(schema) {
  */
 
 function printIntrospectionSchema(schema) {
-  return printFilteredSchema(schema, isSpecDirective, isIntrospectionType);
-}
-
-function isSpecDirective(directiveName) {
-  return directiveName === 'skip' || directiveName === 'include';
+  return printFilteredSchema(schema, isIntrospectionType);
 }
 
 function isDefinedType(typename) {
@@ -61,38 +52,14 @@ function isBuiltInScalar(typename) {
   return typename === 'String' || typename === 'Boolean' || typename === 'Int' || typename === 'Float' || typename === 'ID';
 }
 
-function printFilteredSchema(schema, directiveFilter, typeFilter) {
-  var directives = schema.getDirectives().filter(function (directive) {
-    return directiveFilter(directive.name);
-  });
+function printFilteredSchema(schema, typeFilter) {
   var typeMap = schema.getTypeMap();
-  var types = (0, _keys2.default)(typeMap).filter(typeFilter).sort(function (name1, name2) {
+  var types = Object.keys(typeMap).filter(typeFilter).sort(function (name1, name2) {
     return name1.localeCompare(name2);
   }).map(function (typeName) {
     return typeMap[typeName];
   });
-  return [printSchemaDefinition(schema)].concat(directives.map(printDirective), types.map(printType)).join('\n\n') + '\n';
-}
-
-function printSchemaDefinition(schema) {
-  var operationTypes = [];
-
-  var queryType = schema.getQueryType();
-  if (queryType) {
-    operationTypes.push('  query: ' + queryType);
-  }
-
-  var mutationType = schema.getMutationType();
-  if (mutationType) {
-    operationTypes.push('  mutation: ' + mutationType);
-  }
-
-  var subscriptionType = schema.getSubscriptionType();
-  if (subscriptionType) {
-    operationTypes.push('  subscription: ' + subscriptionType);
-  }
-
-  return 'schema {\n' + operationTypes.join('\n') + '\n}';
+  return types.map(printType).join('\n\n') + '\n';
 }
 
 function printType(type) {
@@ -128,7 +95,7 @@ function printInterface(type) {
 }
 
 function printUnion(type) {
-  return 'union ' + type.name + ' = ' + type.getTypes().join(' | ');
+  return 'union ' + type.name + ' = ' + type.getPossibleTypes().join(' | ');
 }
 
 function printEnum(type) {
@@ -140,7 +107,7 @@ function printEnum(type) {
 
 function printInputObject(type) {
   var fieldMap = type.getFields();
-  var fields = (0, _keys2.default)(fieldMap).map(function (fieldName) {
+  var fields = Object.keys(fieldMap).map(function (fieldName) {
     return fieldMap[fieldName];
   });
   return 'input ' + type.name + ' {\n' + fields.map(function (f) {
@@ -150,7 +117,7 @@ function printInputObject(type) {
 
 function printFields(type) {
   var fieldMap = type.getFields();
-  var fields = (0, _keys2.default)(fieldMap).map(function (fieldName) {
+  var fields = Object.keys(fieldMap).map(function (fieldName) {
     return fieldMap[fieldName];
   });
   return fields.map(function (f) {
@@ -158,11 +125,11 @@ function printFields(type) {
   }).join('\n');
 }
 
-function printArgs(fieldOrDirectives) {
-  if (fieldOrDirectives.args.length === 0) {
+function printArgs(field) {
+  if (field.args.length === 0) {
     return '';
   }
-  return '(' + fieldOrDirectives.args.map(printInputValue).join(', ') + ')';
+  return '(' + field.args.map(printInputValue).join(', ') + ')';
 }
 
 function printInputValue(arg) {
@@ -171,8 +138,4 @@ function printInputValue(arg) {
     argDecl += ' = ' + (0, _printer.print)((0, _astFromValue.astFromValue)(arg.defaultValue, arg.type));
   }
   return argDecl;
-}
-
-function printDirective(directive) {
-  return 'directive @' + directive.name + printArgs(directive) + ' on ' + directive.locations.join(' | ');
 }

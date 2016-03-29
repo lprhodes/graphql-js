@@ -1,41 +1,32 @@
 'use strict';
 
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _set = require('babel-runtime/core-js/set');
-
-var _set2 = _interopRequireDefault(_set);
-
-var _map = require('babel-runtime/core-js/map');
-
-var _map2 = _interopRequireDefault(_map);
-
-var _classCallCheck2 = require('babel-runtime/helpers/classCallCheck');
-
-var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
-
-var _createClass2 = require('babel-runtime/helpers/createClass');
-
-var _createClass3 = _interopRequireDefault(_createClass2);
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
-
-var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
-
 exports.fieldsConflictMessage = fieldsConflictMessage;
 exports.OverlappingFieldsCanBeMerged = OverlappingFieldsCanBeMerged;
+
+var _index = require('../index');
 
 var _error = require('../../error');
 
 var _find = require('../../jsutils/find');
 
 var _find2 = _interopRequireDefault(_find);
+
+var _ast = require('../../language/ast');
 
 var _kinds = require('../../language/kinds');
 
@@ -49,14 +40,7 @@ var _typeFromAST = require('../../utilities/typeFromAST');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function fieldsConflictMessage(responseName, reason) {
   return 'Fields "' + responseName + '" conflict because ' + reasonMessage(reason) + '.';
@@ -65,7 +49,7 @@ function fieldsConflictMessage(responseName, reason) {
 function reasonMessage(reason) {
   if (Array.isArray(reason)) {
     return reason.map(function (_ref) {
-      var _ref2 = (0, _slicedToArray3.default)(_ref, 2);
+      var _ref2 = _slicedToArray(_ref, 2);
 
       var responseName = _ref2[0];
       var subreason = _ref2[1];
@@ -87,7 +71,7 @@ function OverlappingFieldsCanBeMerged(context) {
 
   function findConflicts(fieldMap) {
     var conflicts = [];
-    (0, _keys2.default)(fieldMap).forEach(function (responseName) {
+    Object.keys(fieldMap).forEach(function (responseName) {
       var fields = fieldMap[responseName];
       if (fields.length > 1) {
         for (var i = 0; i < fields.length; i++) {
@@ -104,13 +88,13 @@ function OverlappingFieldsCanBeMerged(context) {
   }
 
   function findConflict(responseName, field1, field2) {
-    var _field = (0, _slicedToArray3.default)(field1, 3);
+    var _field = _slicedToArray(field1, 3);
 
     var parentType1 = _field[0];
     var ast1 = _field[1];
     var def1 = _field[2];
 
-    var _field2 = (0, _slicedToArray3.default)(field2, 3);
+    var _field2 = _slicedToArray(field2, 3);
 
     var parentType2 = _field2[0];
     var ast2 = _field2[1];
@@ -164,17 +148,17 @@ function OverlappingFieldsCanBeMerged(context) {
       var conflicts = findConflicts(subfieldMap);
       if (conflicts.length > 0) {
         return [[responseName, conflicts.map(function (_ref3) {
-          var _ref4 = (0, _slicedToArray3.default)(_ref3, 1);
+          var _ref4 = _slicedToArray(_ref3, 1);
 
           var reason = _ref4[0];
           return reason;
         })], conflicts.reduce(function (allFields, _ref5) {
-          var _ref6 = (0, _slicedToArray3.default)(_ref5, 2);
+          var _ref6 = _slicedToArray(_ref5, 2);
 
           var fields1 = _ref6[1];
           return allFields.concat(fields1);
         }, [ast1]), conflicts.reduce(function (allFields, _ref7) {
-          var _ref8 = (0, _slicedToArray3.default)(_ref7, 3);
+          var _ref8 = _slicedToArray(_ref7, 3);
 
           var fields2 = _ref8[2];
           return allFields.concat(fields2);
@@ -192,9 +176,9 @@ function OverlappingFieldsCanBeMerged(context) {
         var fieldMap = collectFieldASTsAndDefs(context, context.getParentType(), selectionSet);
         var conflicts = findConflicts(fieldMap);
         conflicts.forEach(function (_ref9) {
-          var _ref10 = (0, _slicedToArray3.default)(_ref9, 3);
+          var _ref10 = _slicedToArray(_ref9, 3);
 
-          var _ref10$ = (0, _slicedToArray3.default)(_ref10[0], 2);
+          var _ref10$ = _slicedToArray(_ref10[0], 2);
 
           var responseName = _ref10$[0];
           var reason = _ref10$[1];
@@ -213,7 +197,6 @@ function OverlappingFieldsCanBeMerged(context) {
 // Tuple defining an AST in a context
 
 // Map of array of those.
-
 
 function sameArguments(arguments1, arguments2) {
   if (arguments1.length !== arguments2.length) {
@@ -250,7 +233,7 @@ function collectFieldASTsAndDefs(context, parentType, selectionSet, visitedFragm
     switch (selection.kind) {
       case _kinds.FIELD:
         var fieldName = selection.name.value;
-        var fieldDef = void 0;
+        var fieldDef = undefined;
         if (parentType instanceof _definition.GraphQLObjectType || parentType instanceof _definition.GraphQLInterfaceType) {
           fieldDef = parentType.getFields()[fieldName];
         }
@@ -288,14 +271,14 @@ function collectFieldASTsAndDefs(context, parentType, selectionSet, visitedFragm
  * not matter. We do this by maintaining a sort of double adjacency sets.
  */
 
-var PairSet = function () {
+var PairSet = (function () {
   function PairSet() {
-    (0, _classCallCheck3.default)(this, PairSet);
+    _classCallCheck(this, PairSet);
 
-    this._data = new _map2.default();
+    this._data = new Map();
   }
 
-  (0, _createClass3.default)(PairSet, [{
+  _createClass(PairSet, [{
     key: 'has',
     value: function has(a, b) {
       var first = this._data.get(a);
@@ -308,13 +291,14 @@ var PairSet = function () {
       _pairSetAdd(this._data, b, a);
     }
   }]);
+
   return PairSet;
-}();
+})();
 
 function _pairSetAdd(data, a, b) {
   var set = data.get(a);
   if (!set) {
-    set = new _set2.default();
+    set = new Set();
     data.set(a, set);
   }
   set.add(b);

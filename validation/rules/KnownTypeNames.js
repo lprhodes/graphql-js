@@ -6,16 +6,11 @@ Object.defineProperty(exports, "__esModule", {
 exports.unknownTypeMessage = unknownTypeMessage;
 exports.KnownTypeNames = KnownTypeNames;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
+var _definition = require('../../type/definition');
 
 function unknownTypeMessage(type) {
   return 'Unknown type "' + type + '".';
@@ -27,6 +22,16 @@ function unknownTypeMessage(type) {
  * A GraphQL document is only valid if referenced types (specifically
  * variable definitions and fragment conditions) are defined by the type schema.
  */
+
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
+
 function KnownTypeNames(context) {
   return {
     // TODO: when validating IDL, re-enable these. Experimental version does not

@@ -7,6 +7,8 @@ exports.missingFieldArgMessage = missingFieldArgMessage;
 exports.missingDirectiveArgMessage = missingDirectiveArgMessage;
 exports.ProvidedNonNullArguments = ProvidedNonNullArguments;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 var _keyMap = require('../../jsutils/keyMap');
@@ -17,6 +19,9 @@ var _definition = require('../../type/definition');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function missingFieldArgMessage(fieldName, argName, type) {
+  return 'Field "' + fieldName + '" argument "' + argName + '" of type "' + type + '" ' + 'is required but not provided.';
+}
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -25,10 +30,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  *  LICENSE file in the root directory of this source tree. An additional grant
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
-
-function missingFieldArgMessage(fieldName, argName, type) {
-  return 'Field "' + fieldName + '" argument "' + argName + '" of type "' + type + '" ' + 'is required but not provided.';
-}
 
 function missingDirectiveArgMessage(directiveName, argName, type) {
   return 'Directive "@' + directiveName + '" argument "' + argName + '" of type ' + ('"' + type + '" is required but not provided.');

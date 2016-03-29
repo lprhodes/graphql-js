@@ -3,17 +3,12 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _create = require('babel-runtime/core-js/object/create');
-
-var _create2 = _interopRequireDefault(_create);
-
 exports.duplicateFragmentNameMessage = duplicateFragmentNameMessage;
 exports.UniqueFragmentNames = UniqueFragmentNames;
 
-var _error = require('../../error');
+var _index = require('../index');
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _error = require('../../error');
 
 /**
  *  Copyright (c) 2015, Facebook, Inc.
@@ -34,7 +29,7 @@ function duplicateFragmentNameMessage(fragName) {
  * A GraphQL document is only valid if all defined fragments have unique names.
  */
 function UniqueFragmentNames(context) {
-  var knownFragmentNames = (0, _create2.default)(null);
+  var knownFragmentNames = Object.create(null);
   return {
     OperationDefinition: function OperationDefinition() {
       return false;

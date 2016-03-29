@@ -7,7 +7,11 @@ exports.noSubselectionAllowedMessage = noSubselectionAllowedMessage;
 exports.requiredSubselectionMessage = requiredSubselectionMessage;
 exports.ScalarLeafs = ScalarLeafs;
 
+var _index = require('../index');
+
 var _error = require('../../error');
+
+var _ast = require('../../language/ast');
 
 var _definition = require('../../type/definition');
 

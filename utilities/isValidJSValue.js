@@ -3,27 +3,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _stringify = require('babel-runtime/core-js/json/stringify');
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
-var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
-
-var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _getIterator2 = require('babel-runtime/core-js/get-iterator');
-
-var _getIterator3 = _interopRequireDefault(_getIterator2);
-
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
 exports.isValidJSValue = isValidJSValue;
 
 var _invariant = require('../jsutils/invariant');
@@ -37,6 +16,18 @@ var _isNullish2 = _interopRequireDefault(_isNullish);
 var _definition = require('../type/definition');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
 
 /**
  * Given a JavaScript value and a GraphQL type, determine if the value will be
@@ -61,7 +52,7 @@ function isValidJSValue(value, type) {
 
   // Lists accept a non-list value as a list of one.
   if (type instanceof _definition.GraphQLList) {
-    var _ret = function () {
+    var _ret = (function () {
       var itemType = type.ofType;
       if (Array.isArray(value)) {
         return {
@@ -76,14 +67,14 @@ function isValidJSValue(value, type) {
       return {
         v: isValidJSValue(value, itemType)
       };
-    }();
+    })();
 
-    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
   }
 
   // Input objects check each defined field.
   if (type instanceof _definition.GraphQLInputObjectType) {
-    if ((typeof value === 'undefined' ? 'undefined' : (0, _typeof3.default)(value)) !== 'object' || value === null) {
+    if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object' || value === null) {
       return ['Expected "' + type.name + '", found not an object.'];
     }
     var fields = type.getFields();
@@ -96,7 +87,7 @@ function isValidJSValue(value, type) {
     var _iteratorError = undefined;
 
     try {
-      for (var _iterator = (0, _getIterator3.default)((0, _keys2.default)(value)), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      for (var _iterator = Object.keys(value)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
         var providedField = _step.value;
 
         if (!fields[providedField]) {
@@ -129,12 +120,12 @@ function isValidJSValue(value, type) {
         var fieldName = _step2.value;
 
         var newErrors = isValidJSValue(value[fieldName], fields[fieldName].type);
-        errors.push.apply(errors, (0, _toConsumableArray3.default)(newErrors.map(function (error) {
+        errors.push.apply(errors, _toConsumableArray(newErrors.map(function (error) {
           return 'In field "' + fieldName + '": ' + error;
         })));
       };
 
-      for (var _iterator2 = (0, _getIterator3.default)((0, _keys2.default)(fields)), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+      for (var _iterator2 = Object.keys(fields)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
         _loop();
       }
     } catch (err) {
@@ -161,16 +152,8 @@ function isValidJSValue(value, type) {
   // a non-null value.
   var parseResult = type.parseValue(value);
   if ((0, _isNullish2.default)(parseResult)) {
-    return ['Expected type "' + type.name + '", found ' + (0, _stringify2.default)(value) + '.'];
+    return ['Expected type "' + type.name + '", found ' + JSON.stringify(value) + '.'];
   }
 
   return [];
 }
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */

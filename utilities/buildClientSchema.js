@@ -25,11 +25,13 @@ var _schema = require('../type/schema');
 
 var _definition = require('../type/definition');
 
-var _introspection = require('../type/introspection');
-
 var _scalars = require('../type/scalars');
 
 var _directives = require('../type/directives');
+
+var _introspection = require('../type/introspection');
+
+var _introspectionQuery = require('./introspectionQuery');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -42,6 +44,16 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * represent the "resolver", "parse" or "serialize" functions or any other
  * server-internal mechanisms.
  */
+
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
+
 function buildClientSchema(introspection) {
 
   // Get the schema from the introspection result.
@@ -60,15 +72,7 @@ function buildClientSchema(introspection) {
     Int: _scalars.GraphQLInt,
     Float: _scalars.GraphQLFloat,
     Boolean: _scalars.GraphQLBoolean,
-    ID: _scalars.GraphQLID,
-    __Schema: _introspection.__Schema,
-    __Directive: _introspection.__Directive,
-    __DirectiveLocation: _introspection.__DirectiveLocation,
-    __Type: _introspection.__Type,
-    __Field: _introspection.__Field,
-    __InputValue: _introspection.__InputValue,
-    __EnumValue: _introspection.__EnumValue,
-    __TypeKind: _introspection.__TypeKind
+    ID: _scalars.GraphQLID
   };
 
   // Given a type reference in introspection, return the GraphQLType instance.
@@ -189,7 +193,9 @@ function buildClientSchema(introspection) {
       fields: function fields() {
         return buildFieldDefMap(interfaceIntrospection);
       },
-      resolveType: cannotExecuteClientSchema
+      resolveType: function resolveType() {
+        throw new Error('Client Schema cannot be used for execution.');
+      }
     });
   }
 
@@ -198,7 +204,9 @@ function buildClientSchema(introspection) {
       name: unionIntrospection.name,
       description: unionIntrospection.description,
       types: unionIntrospection.possibleTypes.map(getObjectType),
-      resolveType: cannotExecuteClientSchema
+      resolveType: function resolveType() {
+        throw new Error('Client Schema cannot be used for execution.');
+      }
     });
   }
 
@@ -236,7 +244,9 @@ function buildClientSchema(introspection) {
         deprecationReason: fieldIntrospection.deprecationReason,
         type: getOutputType(fieldIntrospection.type),
         args: buildInputValueDefMap(fieldIntrospection.args),
-        resolve: cannotExecuteClientSchema
+        resolve: function resolve() {
+          throw new Error('Client Schema cannot be used for execution.');
+        }
       };
     });
   }
@@ -259,20 +269,19 @@ function buildClientSchema(introspection) {
   }
 
   function buildDirective(directiveIntrospection) {
-    // Support deprecated `on****` fields for building `locations`, as this
-    // is used by GraphiQL which may need to support outdated servers.
-    var locations = directiveIntrospection.locations ? directiveIntrospection.locations.slice() : [].concat(!directiveIntrospection.onField ? [] : [_directives.DirectiveLocation.FIELD], !directiveIntrospection.onOperation ? [] : [_directives.DirectiveLocation.QUERY, _directives.DirectiveLocation.MUTATION, _directives.DirectiveLocation.SUBSCRIPTION], !directiveIntrospection.onFragment ? [] : [_directives.DirectiveLocation.FRAGMENT_DEFINITION, _directives.DirectiveLocation.FRAGMENT_SPREAD, _directives.DirectiveLocation.INLINE_FRAGMENT]);
     return new _directives.GraphQLDirective({
       name: directiveIntrospection.name,
       description: directiveIntrospection.description,
-      locations: locations,
-      args: buildInputValueDefMap(directiveIntrospection.args)
+      args: directiveIntrospection.args.map(buildInputValue),
+      onOperation: directiveIntrospection.onOperation,
+      onFragment: directiveIntrospection.onFragment,
+      onField: directiveIntrospection.onField
     });
   }
 
   // Iterate through all types, getting the type definition for each, ensuring
   // that any type not directly referenced by a field will get created.
-  var types = schemaIntrospection.types.map(function (typeIntrospection) {
+  schemaIntrospection.types.forEach(function (typeIntrospection) {
     return getNamedType(typeIntrospection.name);
   });
 
@@ -292,19 +301,6 @@ function buildClientSchema(introspection) {
     query: queryType,
     mutation: mutationType,
     subscription: subscriptionType,
-    types: types,
     directives: directives
   });
-}
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
-
-function cannotExecuteClientSchema() {
-  throw new Error('Client Schema cannot be used for execution.');
 }

@@ -3,19 +3,16 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
 exports.undefinedFieldMessage = undefinedFieldMessage;
 exports.FieldsOnCorrectType = FieldsOnCorrectType;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
-var _definition = require('../../type/definition');
+var _ast = require('../../language/ast');
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _definition = require('../../type/definition');
 
 function undefinedFieldMessage(fieldName, type, suggestedTypes) {
   var message = 'Cannot query field "' + fieldName + '" on type "' + type + '".';
@@ -59,9 +56,8 @@ function FieldsOnCorrectType(context) {
           // This isn't valid. Let's find suggestions, if any.
           var suggestedTypes = [];
           if ((0, _definition.isAbstractType)(type)) {
-            var schema = context.getSchema();
-            suggestedTypes = getSiblingInterfacesIncludingField(schema, type, node.name.value);
-            suggestedTypes = suggestedTypes.concat(getImplementationsIncludingField(schema, type, node.name.value));
+            suggestedTypes = getSiblingInterfacesIncludingField(type, node.name.value);
+            suggestedTypes = suggestedTypes.concat(getImplementationsIncludingField(type, node.name.value));
           }
           context.reportError(new _error.GraphQLError(undefinedFieldMessage(node.name.value, type.name, suggestedTypes), [node]));
         }
@@ -73,8 +69,8 @@ function FieldsOnCorrectType(context) {
 /**
  * Return implementations of `type` that include `fieldName` as a valid field.
  */
-function getImplementationsIncludingField(schema, type, fieldName) {
-  return schema.getPossibleTypes(type).filter(function (t) {
+function getImplementationsIncludingField(type, fieldName) {
+  return type.getPossibleTypes().filter(function (t) {
     return t.getFields()[fieldName] !== undefined;
   }).map(function (t) {
     return t.name;
@@ -87,8 +83,12 @@ function getImplementationsIncludingField(schema, type, fieldName) {
  * return them, sorted by how often the implementations include the other
  * interface.
  */
-function getSiblingInterfacesIncludingField(schema, type, fieldName) {
-  var suggestedInterfaces = schema.getPossibleTypes(type).reduce(function (acc, t) {
+function getSiblingInterfacesIncludingField(type, fieldName) {
+  var implementingObjects = type.getPossibleTypes().filter(function (t) {
+    return t instanceof _definition.GraphQLObjectType;
+  });
+
+  var suggestedInterfaces = implementingObjects.reduce(function (acc, t) {
     t.getInterfaces().forEach(function (i) {
       if (i.getFields()[fieldName] === undefined) {
         return;
@@ -100,7 +100,7 @@ function getSiblingInterfacesIncludingField(schema, type, fieldName) {
     });
     return acc;
   }, {});
-  return (0, _keys2.default)(suggestedInterfaces).sort(function (a, b) {
+  return Object.keys(suggestedInterfaces).sort(function (a, b) {
     return suggestedInterfaces[b] - suggestedInterfaces[a];
   });
 }

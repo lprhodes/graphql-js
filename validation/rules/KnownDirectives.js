@@ -7,6 +7,8 @@ exports.unknownDirectiveMessage = unknownDirectiveMessage;
 exports.misplacedDirectiveMessage = misplacedDirectiveMessage;
 exports.KnownDirectives = KnownDirectives;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 var _find = require('../../jsutils/find');
@@ -15,13 +17,8 @@ var _find2 = _interopRequireDefault(_find);
 
 var _kinds = require('../../language/kinds');
 
-var _directives = require('../../type/directives');
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function unknownDirectiveMessage(directiveName) {
-  return 'Unknown directive "' + directiveName + '".';
-}
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -31,8 +28,12 @@ function unknownDirectiveMessage(directiveName) {
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
 
-function misplacedDirectiveMessage(directiveName, location) {
-  return 'Directive "' + directiveName + '" may not be used on ' + location + '.';
+function unknownDirectiveMessage(directiveName) {
+  return 'Unknown directive "' + directiveName + '".';
+}
+
+function misplacedDirectiveMessage(directiveName, placement) {
+  return 'Directive "' + directiveName + '" may not be used on "' + placement + '".';
 }
 
 /**
@@ -52,35 +53,25 @@ function KnownDirectives(context) {
         return;
       }
       var appliedTo = ancestors[ancestors.length - 1];
-      var candidateLocation = getLocationForAppliedNode(appliedTo);
-      if (!candidateLocation) {
-        context.reportError(new _error.GraphQLError(misplacedDirectiveMessage(node.name.value, node.type), [node]));
-      } else if (directiveDef.locations.indexOf(candidateLocation) === -1) {
-        context.reportError(new _error.GraphQLError(misplacedDirectiveMessage(node.name.value, candidateLocation), [node]));
+      switch (appliedTo.kind) {
+        case _kinds.OPERATION_DEFINITION:
+          if (!directiveDef.onOperation) {
+            context.reportError(new _error.GraphQLError(misplacedDirectiveMessage(node.name.value, 'operation'), [node]));
+          }
+          break;
+        case _kinds.FIELD:
+          if (!directiveDef.onField) {
+            context.reportError(new _error.GraphQLError(misplacedDirectiveMessage(node.name.value, 'field'), [node]));
+          }
+          break;
+        case _kinds.FRAGMENT_SPREAD:
+        case _kinds.INLINE_FRAGMENT:
+        case _kinds.FRAGMENT_DEFINITION:
+          if (!directiveDef.onFragment) {
+            context.reportError(new _error.GraphQLError(misplacedDirectiveMessage(node.name.value, 'fragment'), [node]));
+          }
+          break;
       }
     }
   };
-}
-
-function getLocationForAppliedNode(appliedTo) {
-  switch (appliedTo.kind) {
-    case _kinds.OPERATION_DEFINITION:
-      switch (appliedTo.operation) {
-        case 'query':
-          return _directives.DirectiveLocation.QUERY;
-        case 'mutation':
-          return _directives.DirectiveLocation.MUTATION;
-        case 'subscription':
-          return _directives.DirectiveLocation.SUBSCRIPTION;
-      }
-      break;
-    case _kinds.FIELD:
-      return _directives.DirectiveLocation.FIELD;
-    case _kinds.FRAGMENT_SPREAD:
-      return _directives.DirectiveLocation.FRAGMENT_SPREAD;
-    case _kinds.INLINE_FRAGMENT:
-      return _directives.DirectiveLocation.INLINE_FRAGMENT;
-    case _kinds.FRAGMENT_DEFINITION:
-      return _directives.DirectiveLocation.FRAGMENT_DEFINITION;
-  }
 }

@@ -9,19 +9,15 @@ var _invariant = require('../jsutils/invariant');
 
 var _invariant2 = _interopRequireDefault(_invariant);
 
+var _GraphQLError = require('./GraphQLError');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /**
  * Given a GraphQLError, format it according to the rules described by the
  * Response Format, Errors section of the GraphQL Specification.
  */
-function formatError(error) {
-  (0, _invariant2.default)(error, 'Received null or undefined error.');
-  return {
-    message: error.message,
-    locations: error.locations
-  };
-}
+
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -30,3 +26,11 @@ function formatError(error) {
  *  LICENSE file in the root directory of this source tree. An additional grant
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
+
+function formatError(error) {
+  (0, _invariant2.default)(error, 'Received null or undefined error.');
+  return {
+    message: error.message,
+    locations: error.locations
+  };
+}

@@ -3,15 +3,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
 exports.valueFromAST = valueFromAST;
 
 var _keyMap = require('../jsutils/keyMap');
@@ -32,9 +23,21 @@ var Kind = _interopRequireWildcard(_kinds);
 
 var _definition = require('../type/definition');
 
+var _ast = require('../language/ast');
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
 
 /**
  * Produces a JavaScript value given a GraphQL Value AST.
@@ -75,7 +78,7 @@ function valueFromAST(valueAST, type, variables) {
   }
 
   if (type instanceof _definition.GraphQLList) {
-    var _ret = function () {
+    var _ret = (function () {
       var itemType = type.ofType;
       if (valueAST.kind === Kind.LIST) {
         return {
@@ -87,13 +90,13 @@ function valueFromAST(valueAST, type, variables) {
       return {
         v: [valueFromAST(valueAST, itemType, variables)]
       };
-    }();
+    })();
 
-    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
   }
 
   if (type instanceof _definition.GraphQLInputObjectType) {
-    var _ret2 = function () {
+    var _ret2 = (function () {
       var fields = type.getFields();
       if (valueAST.kind !== Kind.OBJECT) {
         return {
@@ -104,7 +107,7 @@ function valueFromAST(valueAST, type, variables) {
         return field.name.value;
       });
       return {
-        v: (0, _keys2.default)(fields).reduce(function (obj, fieldName) {
+        v: Object.keys(fields).reduce(function (obj, fieldName) {
           var field = fields[fieldName];
           var fieldAST = fieldASTs[fieldName];
           var fieldValue = valueFromAST(fieldAST && fieldAST.value, field.type, variables);
@@ -117,9 +120,9 @@ function valueFromAST(valueAST, type, variables) {
           return obj;
         }, {})
       };
-    }();
+    })();
 
-    if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+    if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
   }
 
   (0, _invariant2.default)(type instanceof _definition.GraphQLScalarType || type instanceof _definition.GraphQLEnumType, 'Must be input type');
@@ -129,11 +132,3 @@ function valueFromAST(valueAST, type, variables) {
     return parsed;
   }
 }
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */

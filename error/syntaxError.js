@@ -7,11 +7,23 @@ exports.syntaxError = syntaxError;
 
 var _location = require('../language/location');
 
+var _source = require('../language/source');
+
 var _GraphQLError = require('./GraphQLError');
 
 /**
  * Produces a GraphQLError representing a syntax error, containing useful
  * descriptive information about the syntax error's position in the source.
+ */
+function syntaxError(source, position, description) {
+  var location = (0, _location.getLocation)(source, position);
+  var error = new _GraphQLError.GraphQLError('Syntax Error ' + source.name + ' (' + location.line + ':' + location.column + ') ' + description + '\n\n' + highlightSourceAtLocation(source, location), undefined, undefined, source, [position]);
+  return error;
+}
+
+/**
+ * Render a helpful description of the location of the error in the GraphQL
+ * Source document.
  */
 
 /**
@@ -23,16 +35,6 @@ var _GraphQLError = require('./GraphQLError');
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
 
-function syntaxError(source, position, description) {
-  var location = (0, _location.getLocation)(source, position);
-  var error = new _GraphQLError.GraphQLError('Syntax Error ' + source.name + ' (' + location.line + ':' + location.column + ') ' + description + '\n\n' + highlightSourceAtLocation(source, location), undefined, undefined, source, [position]);
-  return error;
-}
-
-/**
- * Render a helpful description of the location of the error in the GraphQL
- * Source document.
- */
 function highlightSourceAtLocation(source, location) {
   var line = location.line;
   var prevLineNum = (line - 1).toString();

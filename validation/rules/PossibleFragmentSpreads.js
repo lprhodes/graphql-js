@@ -7,12 +7,19 @@ exports.typeIncompatibleSpreadMessage = typeIncompatibleSpreadMessage;
 exports.typeIncompatibleAnonSpreadMessage = typeIncompatibleAnonSpreadMessage;
 exports.PossibleFragmentSpreads = PossibleFragmentSpreads;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 var _typeComparators = require('../../utilities/typeComparators');
 
 var _typeFromAST = require('../../utilities/typeFromAST');
 
+var _definition = require('../../type/definition');
+
+function typeIncompatibleSpreadMessage(fragName, parentType, fragType) {
+  return 'Fragment "' + fragName + '" cannot be spread here as objects of ' + ('type "' + parentType + '" can never be of type "' + fragType + '".');
+}
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -21,10 +28,6 @@ var _typeFromAST = require('../../utilities/typeFromAST');
  *  LICENSE file in the root directory of this source tree. An additional grant
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
-
-function typeIncompatibleSpreadMessage(fragName, parentType, fragType) {
-  return 'Fragment "' + fragName + '" cannot be spread here as objects of ' + ('type "' + parentType + '" can never be of type "' + fragType + '".');
-}
 
 function typeIncompatibleAnonSpreadMessage(parentType, fragType) {
   return 'Fragment cannot be spread here as objects of ' + ('type "' + parentType + '" can never be of type "' + fragType + '".');
@@ -42,7 +45,7 @@ function PossibleFragmentSpreads(context) {
     InlineFragment: function InlineFragment(node) {
       var fragType = context.getType();
       var parentType = context.getParentType();
-      if (fragType && parentType && !(0, _typeComparators.doTypesOverlap)(context.getSchema(), fragType, parentType)) {
+      if (fragType && parentType && !(0, _typeComparators.doTypesOverlap)(fragType, parentType)) {
         context.reportError(new _error.GraphQLError(typeIncompatibleAnonSpreadMessage(parentType, fragType), [node]));
       }
     },
@@ -50,7 +53,7 @@ function PossibleFragmentSpreads(context) {
       var fragName = node.name.value;
       var fragType = getFragmentType(context, fragName);
       var parentType = context.getParentType();
-      if (fragType && parentType && !(0, _typeComparators.doTypesOverlap)(context.getSchema(), fragType, parentType)) {
+      if (fragType && parentType && !(0, _typeComparators.doTypesOverlap)(fragType, parentType)) {
         context.reportError(new _error.GraphQLError(typeIncompatibleSpreadMessage(fragName, parentType, fragType), [node]));
       }
     }

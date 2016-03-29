@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.unknownFragmentMessage = unknownFragmentMessage;
 exports.KnownFragmentNames = KnownFragmentNames;
 
+var _index = require('../index');
+
 var _error = require('../../error');
 
 /**

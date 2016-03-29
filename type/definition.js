@@ -1,38 +1,23 @@
 'use strict';
 
+var util = require('util')
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.GraphQLNonNull = exports.GraphQLList = exports.GraphQLInputObjectType = exports.GraphQLEnumType = exports.GraphQLUnionType = exports.GraphQLInterfaceType = exports.GraphQLObjectType = exports.GraphQLScalarType = undefined;
-
-var _create = require('babel-runtime/core-js/object/create');
-
-var _create2 = _interopRequireDefault(_create);
-
-var _map = require('babel-runtime/core-js/map');
-
-var _map2 = _interopRequireDefault(_map);
-
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
-var _extends2 = require('babel-runtime/helpers/extends');
-
-var _extends3 = _interopRequireDefault(_extends2);
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _classCallCheck2 = require('babel-runtime/helpers/classCallCheck');
-
-var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
-
-var _createClass2 = require('babel-runtime/helpers/createClass');
-
-var _createClass3 = _interopRequireDefault(_createClass2);
-
 exports.isType = isType;
 exports.isInputType = isInputType;
 exports.isOutputType = isOutputType;
@@ -50,27 +35,27 @@ var _isNullish = require('../jsutils/isNullish');
 
 var _isNullish2 = _interopRequireDefault(_isNullish);
 
+var _keyMap = require('../jsutils/keyMap');
+
+var _keyMap2 = _interopRequireDefault(_keyMap);
+
 var _kinds = require('../language/kinds');
 
-var _assertValidName = require('../utilities/assertValidName');
+var _ast = require('../language/ast');
+
+var _schema = require('./schema');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // Predicates
 
 /**
  * These are all of the possible kinds of types.
  */
-
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
-
 function isType(type) {
   return type instanceof GraphQLScalarType || type instanceof GraphQLObjectType || type instanceof GraphQLInterfaceType || type instanceof GraphQLUnionType || type instanceof GraphQLEnumType || type instanceof GraphQLInputObjectType || type instanceof GraphQLList || type instanceof GraphQLNonNull;
 }
@@ -149,12 +134,12 @@ function getNamedType(type) {
  *
  */
 
-var GraphQLScalarType = exports.GraphQLScalarType = function () {
+var GraphQLScalarType = exports.GraphQLScalarType = (function () {
   function GraphQLScalarType(config) {
-    (0, _classCallCheck3.default)(this, GraphQLScalarType);
+    _classCallCheck(this, GraphQLScalarType);
 
     (0, _invariant2.default)(config.name, 'Type must be named.');
-    (0, _assertValidName.assertValidName)(config.name);
+    assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
     (0, _invariant2.default)(typeof config.serialize === 'function', this + ' must provide "serialize" function. If this custom Scalar is ' + 'also used as an input type, ensure "parseValue" and "parseLiteral" ' + 'functions are also provided.');
@@ -164,7 +149,7 @@ var GraphQLScalarType = exports.GraphQLScalarType = function () {
     this._scalarConfig = config;
   }
 
-  (0, _createClass3.default)(GraphQLScalarType, [{
+  _createClass(GraphQLScalarType, [{
     key: 'serialize',
     value: function serialize(value) {
       var serializer = this._scalarConfig.serialize;
@@ -188,8 +173,9 @@ var GraphQLScalarType = exports.GraphQLScalarType = function () {
       return this.name;
     }
   }]);
+
   return GraphQLScalarType;
-}();
+})();
 
 /**
  * Object Type Definition
@@ -229,12 +215,12 @@ var GraphQLScalarType = exports.GraphQLScalarType = function () {
  *
  */
 
-var GraphQLObjectType = exports.GraphQLObjectType = function () {
+var GraphQLObjectType = exports.GraphQLObjectType = (function () {
   function GraphQLObjectType(config) {
-    (0, _classCallCheck3.default)(this, GraphQLObjectType);
+    _classCallCheck(this, GraphQLObjectType);
 
     (0, _invariant2.default)(config.name, 'Type must be named.');
-    (0, _assertValidName.assertValidName)(config.name);
+    assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
     if (config.isTypeOf) {
@@ -242,9 +228,10 @@ var GraphQLObjectType = exports.GraphQLObjectType = function () {
     }
     this.isTypeOf = config.isTypeOf;
     this._typeConfig = config;
+    addImplementationToInterfaces(this);
   }
 
-  (0, _createClass3.default)(GraphQLObjectType, [{
+  _createClass(GraphQLObjectType, [{
     key: 'getFields',
     value: function getFields() {
       return this._fields || (this._fields = defineFieldMap(this, this._typeConfig.fields));
@@ -260,8 +247,9 @@ var GraphQLObjectType = exports.GraphQLObjectType = function () {
       return this.name;
     }
   }]);
+
   return GraphQLObjectType;
-}();
+})();
 
 function resolveMaybeThunk(thingOrThunk) {
   return typeof thingOrThunk === 'function' ? thingOrThunk() : thingOrThunk;
@@ -286,23 +274,24 @@ function defineFieldMap(type, fields) {
   var fieldMap = resolveMaybeThunk(fields);
   (0, _invariant2.default)(isPlainObj(fieldMap), type + ' fields must be an object with field names as keys or a ' + 'function which returns such an object.');
 
-  var fieldNames = (0, _keys2.default)(fieldMap);
+  var fieldNames = Object.keys(fieldMap);
   (0, _invariant2.default)(fieldNames.length > 0, type + ' fields must be an object with field names as keys or a ' + 'function which returns such an object.');
 
   var resultFieldMap = {};
   fieldNames.forEach(function (fieldName) {
-    (0, _assertValidName.assertValidName)(fieldName);
-    var field = (0, _extends3.default)({}, fieldMap[fieldName], {
+    assertValidName(fieldName);
+    var field = _extends({}, fieldMap[fieldName], {
       name: fieldName
     });
+    
     (0, _invariant2.default)(!field.hasOwnProperty('isDeprecated'), type + '.' + fieldName + ' should provide "deprecationReason" instead ' + 'of "isDeprecated".');
-    (0, _invariant2.default)(isOutputType(field.type), type + '.' + fieldName + ' field type must be Output Type but ' + ('got: ' + field.type + '.'));
+    (0, _invariant2.default)(isOutputType(field.type), type + '.' + fieldName + ' field type must be Output Type but ' + ('got: ' + util.inspect(field, false, null) + '.'));
     if (!field.args) {
       field.args = [];
     } else {
       (0, _invariant2.default)(isPlainObj(field.args), type + '.' + fieldName + ' args must be an object with argument names ' + 'as keys.');
-      field.args = (0, _keys2.default)(field.args).map(function (argName) {
-        (0, _assertValidName.assertValidName)(argName);
+      field.args = Object.keys(field.args).map(function (argName) {
+        assertValidName(argName);
         var arg = field.args[argName];
         (0, _invariant2.default)(isInputType(arg.type), type + '.' + fieldName + '(' + argName + ':) argument type must be ' + ('Input Type but got: ' + arg.type + '.'));
         return {
@@ -319,7 +308,19 @@ function defineFieldMap(type, fields) {
 }
 
 function isPlainObj(obj) {
-  return obj && (typeof obj === 'undefined' ? 'undefined' : (0, _typeof3.default)(obj)) === 'object' && !Array.isArray(obj);
+  return obj && (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && !Array.isArray(obj);
+}
+
+/**
+ * Update the interfaces to know about this implementation.
+ * This is an rare and unfortunate use of mutation in the type definition
+ * implementations, but avoids an expensive "getPossibleTypes"
+ * implementation for Interface types.
+ */
+function addImplementationToInterfaces(impl) {
+  impl.getInterfaces().forEach(function (type) {
+    type._implementations.push(impl);
+  });
 }
 
 /**
@@ -341,12 +342,12 @@ function isPlainObj(obj) {
  *
  */
 
-var GraphQLInterfaceType = exports.GraphQLInterfaceType = function () {
+var GraphQLInterfaceType = exports.GraphQLInterfaceType = (function () {
   function GraphQLInterfaceType(config) {
-    (0, _classCallCheck3.default)(this, GraphQLInterfaceType);
+    _classCallCheck(this, GraphQLInterfaceType);
 
     (0, _invariant2.default)(config.name, 'Type must be named.');
-    (0, _assertValidName.assertValidName)(config.name);
+    assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
     if (config.resolveType) {
@@ -354,12 +355,32 @@ var GraphQLInterfaceType = exports.GraphQLInterfaceType = function () {
     }
     this.resolveType = config.resolveType;
     this._typeConfig = config;
+    this._implementations = [];
   }
 
-  (0, _createClass3.default)(GraphQLInterfaceType, [{
+  _createClass(GraphQLInterfaceType, [{
     key: 'getFields',
     value: function getFields() {
       return this._fields || (this._fields = defineFieldMap(this, this._typeConfig.fields));
+    }
+  }, {
+    key: 'getPossibleTypes',
+    value: function getPossibleTypes() {
+      return this._implementations;
+    }
+  }, {
+    key: 'isPossibleType',
+    value: function isPossibleType(type) {
+      var possibleTypes = this._possibleTypes || (this._possibleTypes = (0, _keyMap2.default)(this.getPossibleTypes(), function (possibleType) {
+        return possibleType.name;
+      }));
+      return Boolean(possibleTypes[type.name]);
+    }
+  }, {
+    key: 'getObjectType',
+    value: function getObjectType(value, info) {
+      var resolver = this.resolveType;
+      return resolver ? resolver(value, info) : getTypeOf(value, info, this);
     }
   }, {
     key: 'toString',
@@ -367,8 +388,19 @@ var GraphQLInterfaceType = exports.GraphQLInterfaceType = function () {
       return this.name;
     }
   }]);
+
   return GraphQLInterfaceType;
-}();
+})();
+
+function getTypeOf(value, info, abstractType) {
+  var possibleTypes = abstractType.getPossibleTypes();
+  for (var i = 0; i < possibleTypes.length; i++) {
+    var _type = possibleTypes[i];
+    if (typeof _type.isTypeOf === 'function' && _type.isTypeOf(value, info)) {
+      return _type;
+    }
+  }
+}
 
 /**
  * Union Type Definition
@@ -394,14 +426,14 @@ var GraphQLInterfaceType = exports.GraphQLInterfaceType = function () {
  *
  */
 
-var GraphQLUnionType = exports.GraphQLUnionType = function () {
+var GraphQLUnionType = exports.GraphQLUnionType = (function () {
   function GraphQLUnionType(config) {
     var _this = this;
 
-    (0, _classCallCheck3.default)(this, GraphQLUnionType);
+    _classCallCheck(this, GraphQLUnionType);
 
     (0, _invariant2.default)(config.name, 'Type must be named.');
-    (0, _assertValidName.assertValidName)(config.name);
+    assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
     if (config.resolveType) {
@@ -419,10 +451,27 @@ var GraphQLUnionType = exports.GraphQLUnionType = function () {
     this._typeConfig = config;
   }
 
-  (0, _createClass3.default)(GraphQLUnionType, [{
-    key: 'getTypes',
-    value: function getTypes() {
+  _createClass(GraphQLUnionType, [{
+    key: 'getPossibleTypes',
+    value: function getPossibleTypes() {
       return this._types;
+    }
+  }, {
+    key: 'isPossibleType',
+    value: function isPossibleType(type) {
+      var possibleTypeNames = this._possibleTypeNames;
+      if (!possibleTypeNames) {
+        this._possibleTypeNames = possibleTypeNames = this.getPossibleTypes().reduce(function (map, possibleType) {
+          return map[possibleType.name] = true, map;
+        }, {});
+      }
+      return possibleTypeNames[type.name] === true;
+    }
+  }, {
+    key: 'getObjectType',
+    value: function getObjectType(value, info) {
+      var resolver = this._typeConfig.resolveType;
+      return resolver ? resolver(value, info) : getTypeOf(value, info, this);
     }
   }, {
     key: 'toString',
@@ -430,8 +479,9 @@ var GraphQLUnionType = exports.GraphQLUnionType = function () {
       return this.name;
     }
   }]);
+
   return GraphQLUnionType;
-}();
+})();
 
 /**
  * Enum Type Definition
@@ -455,19 +505,19 @@ var GraphQLUnionType = exports.GraphQLUnionType = function () {
  * will be used as its internal value.
  */
 
-var GraphQLEnumType /* <T> */ = exports.GraphQLEnumType = function () {
+var GraphQLEnumType /* <T> */ = exports.GraphQLEnumType = (function () {
   /* <T> */
   function GraphQLEnumType(config /* <T> */) {
-    (0, _classCallCheck3.default)(this, GraphQLEnumType);
+    _classCallCheck(this, GraphQLEnumType);
 
     this.name = config.name;
-    (0, _assertValidName.assertValidName)(config.name);
+    assertValidName(config.name);
     this.description = config.description;
     this._values = defineEnumValues(this, config.values);
     this._enumConfig = config;
   } /* <T> */
 
-  (0, _createClass3.default)(GraphQLEnumType, [{
+  _createClass(GraphQLEnumType, [{
     key: 'getValues',
     value: function getValues() /* <T> */{
       return this._values;
@@ -505,7 +555,7 @@ var GraphQLEnumType /* <T> */ = exports.GraphQLEnumType = function () {
 
       if (!this._valueLookup) {
         (function () {
-          var lookup = new _map2.default();
+          var lookup = new Map();
           _this2.getValues().forEach(function (value) {
             lookup.set(value.value, value);
           });
@@ -521,7 +571,7 @@ var GraphQLEnumType /* <T> */ = exports.GraphQLEnumType = function () {
 
       if (!this._nameLookup) {
         (function () {
-          var lookup = (0, _create2.default)(null);
+          var lookup = Object.create(null);
           _this3.getValues().forEach(function (value) {
             lookup[value.name] = value;
           });
@@ -536,16 +586,17 @@ var GraphQLEnumType /* <T> */ = exports.GraphQLEnumType = function () {
       return this.name;
     }
   }]);
+
   return GraphQLEnumType;
-}();
+})();
 
 function defineEnumValues(type, valueMap /* <T> */
 ) /* <T> */{
   (0, _invariant2.default)(isPlainObj(valueMap), type + ' values must be an object with value names as keys.');
-  var valueNames = (0, _keys2.default)(valueMap);
+  var valueNames = Object.keys(valueMap);
   (0, _invariant2.default)(valueNames.length > 0, type + ' values must be an object with value names as keys.');
   return valueNames.map(function (valueName) {
-    (0, _assertValidName.assertValidName)(valueName);
+    assertValidName(valueName);
     var value = valueMap[valueName];
     (0, _invariant2.default)(isPlainObj(value), type + '.' + valueName + ' must refer to an object with a "value" key ' + ('representing an internal value but got: ' + value + '.'));
     (0, _invariant2.default)(!value.hasOwnProperty('isDeprecated'), type + '.' + valueName + ' should provide "deprecationReason" instead ' + 'of "isDeprecated".');
@@ -581,18 +632,18 @@ function defineEnumValues(type, valueMap /* <T> */
  *
  */
 
-var GraphQLInputObjectType = exports.GraphQLInputObjectType = function () {
+var GraphQLInputObjectType = exports.GraphQLInputObjectType = (function () {
   function GraphQLInputObjectType(config) {
-    (0, _classCallCheck3.default)(this, GraphQLInputObjectType);
+    _classCallCheck(this, GraphQLInputObjectType);
 
     (0, _invariant2.default)(config.name, 'Type must be named.');
-    (0, _assertValidName.assertValidName)(config.name);
+    assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
     this._typeConfig = config;
   }
 
-  (0, _createClass3.default)(GraphQLInputObjectType, [{
+  _createClass(GraphQLInputObjectType, [{
     key: 'getFields',
     value: function getFields() {
       return this._fields || (this._fields = this._defineFieldMap());
@@ -601,15 +652,15 @@ var GraphQLInputObjectType = exports.GraphQLInputObjectType = function () {
     key: '_defineFieldMap',
     value: function _defineFieldMap() {
       var _this4 = this;
-
+      
       var fieldMap = resolveMaybeThunk(this._typeConfig.fields);
       (0, _invariant2.default)(isPlainObj(fieldMap), this + ' fields must be an object with field names as keys or a ' + 'function which returns such an object.');
-      var fieldNames = (0, _keys2.default)(fieldMap);
+      var fieldNames = Object.keys(fieldMap);
       (0, _invariant2.default)(fieldNames.length > 0, this + ' fields must be an object with field names as keys or a ' + 'function which returns such an object.');
       var resultFieldMap = {};
       fieldNames.forEach(function (fieldName) {
-        (0, _assertValidName.assertValidName)(fieldName);
-        var field = (0, _extends3.default)({}, fieldMap[fieldName], {
+        assertValidName(fieldName);
+        var field = _extends({}, fieldMap[fieldName], {
           name: fieldName
         });
         (0, _invariant2.default)(isInputType(field.type), _this4 + '.' + fieldName + ' field type must be Input Type but ' + ('got: ' + field.type + '.'));
@@ -623,8 +674,9 @@ var GraphQLInputObjectType = exports.GraphQLInputObjectType = function () {
       return this.name;
     }
   }]);
+
   return GraphQLInputObjectType;
-}();
+})();
 
 /**
  * List Modifier
@@ -645,22 +697,23 @@ var GraphQLInputObjectType = exports.GraphQLInputObjectType = function () {
  *
  */
 
-var GraphQLList = exports.GraphQLList = function () {
+var GraphQLList = exports.GraphQLList = (function () {
   function GraphQLList(type) {
-    (0, _classCallCheck3.default)(this, GraphQLList);
+    _classCallCheck(this, GraphQLList);
 
     (0, _invariant2.default)(isType(type), 'Can only create List of a GraphQLType but got: ' + type + '.');
     this.ofType = type;
   }
 
-  (0, _createClass3.default)(GraphQLList, [{
+  _createClass(GraphQLList, [{
     key: 'toString',
     value: function toString() {
       return '[' + String(this.ofType) + ']';
     }
   }]);
+
   return GraphQLList;
-}();
+})();
 
 /**
  * Non-Null Modifier
@@ -683,20 +736,27 @@ var GraphQLList = exports.GraphQLList = function () {
  * Note: the enforcement of non-nullability occurs within the executor.
  */
 
-
-var GraphQLNonNull = exports.GraphQLNonNull = function () {
+var GraphQLNonNull = exports.GraphQLNonNull = (function () {
   function GraphQLNonNull(type) {
-    (0, _classCallCheck3.default)(this, GraphQLNonNull);
+    _classCallCheck(this, GraphQLNonNull);
 
     (0, _invariant2.default)(isType(type) && !(type instanceof GraphQLNonNull), 'Can only create NonNull of a Nullable GraphQLType but got: ' + type + '.');
     this.ofType = type;
   }
 
-  (0, _createClass3.default)(GraphQLNonNull, [{
+  _createClass(GraphQLNonNull, [{
     key: 'toString',
     value: function toString() {
       return this.ofType.toString() + '!';
     }
   }]);
+
   return GraphQLNonNull;
-}();
+})();
+
+var NAME_RX = /^[_a-zA-Z][_a-zA-Z0-9]*$/;
+
+// Helper to assert that provided names are valid.
+function assertValidName(name) {
+  (0, _invariant2.default)(NAME_RX.test(name), 'Names must match /^[_a-zA-Z][_a-zA-Z0-9]*$/ but "' + name + '" does not.');
+}

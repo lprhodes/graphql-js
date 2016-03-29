@@ -21,11 +21,11 @@ var _valueFromAST = require('./valueFromAST');
 
 var _kinds = require('../language/kinds');
 
+var _ast = require('../language/ast');
+
 var _type = require('../type');
 
-var _directives = require('../type/directives');
-
-var _introspection = require('../type/introspection');
+var _definition = require('../type/definition');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -65,58 +65,27 @@ function getNamedTypeAST(typeAST) {
  * they are not particularly useful for non-introspection queries
  * since they have no resolve methods.
  */
-function buildASTSchema(ast) {
-  if (!ast || ast.kind !== _kinds.DOCUMENT) {
-    throw new Error('Must provide a document ast.');
+function buildASTSchema(ast, queryTypeName, mutationTypeName, subscriptionTypeName) {
+  if (!ast) {
+    throw new Error('must pass in ast');
   }
 
-  var schemaDef = void 0;
+  if (!queryTypeName) {
+    throw new Error('must pass in query type');
+  }
 
   var typeDefs = [];
-  var directiveDefs = [];
   for (var i = 0; i < ast.definitions.length; i++) {
     var d = ast.definitions[i];
     switch (d.kind) {
-      case _kinds.SCHEMA_DEFINITION:
-        if (schemaDef) {
-          throw new Error('Must provide only one schema definition.');
-        }
-        schemaDef = d;
-        break;
-      case _kinds.SCALAR_TYPE_DEFINITION:
       case _kinds.OBJECT_TYPE_DEFINITION:
       case _kinds.INTERFACE_TYPE_DEFINITION:
       case _kinds.ENUM_TYPE_DEFINITION:
       case _kinds.UNION_TYPE_DEFINITION:
+      case _kinds.SCALAR_TYPE_DEFINITION:
       case _kinds.INPUT_OBJECT_TYPE_DEFINITION:
         typeDefs.push(d);
-        break;
-      case _kinds.DIRECTIVE_DEFINITION:
-        directiveDefs.push(d);
-        break;
     }
-  }
-
-  if (!schemaDef) {
-    throw new Error('Must provide a schema definition.');
-  }
-
-  var queryTypeName = void 0;
-  var mutationTypeName = void 0;
-  var subscriptionTypeName = void 0;
-  schemaDef.operationTypes.forEach(function (operationType) {
-    var typeName = operationType.type.name.value;
-    if (operationType.operation === 'query') {
-      queryTypeName = typeName;
-    } else if (operationType.operation === 'mutation') {
-      mutationTypeName = typeName;
-    } else if (operationType.operation === 'subscription') {
-      subscriptionTypeName = typeName;
-    }
-  });
-
-  if (!queryTypeName) {
-    throw new Error('Must provide schema definition with query type.');
   }
 
   var astMap = (0, _keyMap2.default)(typeDefs, function (d) {
@@ -124,15 +93,15 @@ function buildASTSchema(ast) {
   });
 
   if (!astMap[queryTypeName]) {
-    throw new Error('Specified query type "' + queryTypeName + '" not found in document.');
+    throw new Error('Specified query type ' + queryTypeName + ' not found in document.');
   }
 
   if (mutationTypeName && !astMap[mutationTypeName]) {
-    throw new Error('Specified mutation type "' + mutationTypeName + '" not found in document.');
+    throw new Error('Specified mutation type ' + mutationTypeName + ' not found in document.');
   }
 
   if (subscriptionTypeName && !astMap[subscriptionTypeName]) {
-    throw new Error('Specified subscription type "' + subscriptionTypeName + '" not found in document.');
+    throw new Error('Specified subscription type ' + subscriptionTypeName + ' not found in document.');
   }
 
   var innerTypeMap = {
@@ -140,40 +109,18 @@ function buildASTSchema(ast) {
     Int: _type.GraphQLInt,
     Float: _type.GraphQLFloat,
     Boolean: _type.GraphQLBoolean,
-    ID: _type.GraphQLID,
-    __Schema: _introspection.__Schema,
-    __Directive: _introspection.__Directive,
-    __DirectiveLocation: _introspection.__DirectiveLocation,
-    __Type: _introspection.__Type,
-    __Field: _introspection.__Field,
-    __InputValue: _introspection.__InputValue,
-    __EnumValue: _introspection.__EnumValue,
-    __TypeKind: _introspection.__TypeKind
+    ID: _type.GraphQLID
   };
 
-  var types = typeDefs.map(function (def) {
+  typeDefs.forEach(function (def) {
     return typeDefNamed(def.name.value);
   });
-
-  var directives = directiveDefs.map(getDirective);
 
   return new _type.GraphQLSchema({
     query: getObjectType(astMap[queryTypeName]),
     mutation: mutationTypeName ? getObjectType(astMap[mutationTypeName]) : null,
-    subscription: subscriptionTypeName ? getObjectType(astMap[subscriptionTypeName]) : null,
-    types: types,
-    directives: directives
+    subscription: subscriptionTypeName ? getObjectType(astMap[subscriptionTypeName]) : null
   });
-
-  function getDirective(directiveAST) {
-    return new _directives.GraphQLDirective({
-      name: directiveAST.name.value,
-      locations: directiveAST.locations.map(function (node) {
-        return node.value;
-      }),
-      args: makeInputValues(directiveAST.arguments)
-    });
-  }
 
   function getObjectType(typeAST) {
     var type = typeDefNamed(typeAST.name.value);
@@ -193,12 +140,12 @@ function buildASTSchema(ast) {
     }
 
     if (!astMap[typeName]) {
-      throw new Error('Type "' + typeName + '" not found in document.');
+      throw new Error('Type ' + typeName + ' not found in document');
     }
 
     var innerTypeDef = makeSchemaDef(astMap[typeName]);
     if (!innerTypeDef) {
-      throw new Error('Nothing constructed for "' + typeName + '".');
+      throw new Error('Nothing constructed for ' + typeName);
     }
     innerTypeMap[typeName] = innerTypeDef;
     return innerTypeDef;
@@ -222,7 +169,7 @@ function buildASTSchema(ast) {
       case _kinds.INPUT_OBJECT_TYPE_DEFINITION:
         return makeInputObjectDef(def);
       default:
-        throw new Error('Type kind "' + def.kind + '" not supported.');
+        throw new Error(def.kind + ' not supported');
     }
   }
 

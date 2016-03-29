@@ -15,13 +15,14 @@ var _error = require('../error');
 
 var _lexer = require('./lexer');
 
+var _ast = require('./ast');
+
 var _kinds = require('./kinds');
 
 /**
  * Given a GraphQL source, parses it into a Document.
  * Throws GraphQLError if a syntax error is encountered.
  */
-
 
 /**
  * Configuration options to control parser behavior
@@ -91,7 +92,8 @@ function parseDocument(parser) {
  * Definition :
  *   - OperationDefinition
  *   - FragmentDefinition
- *   - TypeSystemDefinition
+ *   - TypeDefinition
+ *   - TypeExtensionDefinition
  */
 function parseDefinition(parser) {
   if (peek(parser, _lexer.TokenKind.BRACE_L)) {
@@ -109,17 +111,15 @@ function parseDefinition(parser) {
       case 'fragment':
         return parseFragmentDefinition(parser);
 
-      // Note: the Type System IDL is an experimental non-spec addition.
-      case 'schema':
-      case 'scalar':
       case 'type':
       case 'interface':
       case 'union':
+      case 'scalar':
       case 'enum':
       case 'input':
+        return parseTypeDefinition(parser);
       case 'extend':
-      case 'directive':
-        return parseTypeSystemDefinition(parser);
+        return parseTypeExtensionDefinition(parser);
     }
   }
 
@@ -132,6 +132,8 @@ function parseDefinition(parser) {
  * OperationDefinition :
  *  - SelectionSet
  *  - OperationType Name? VariableDefinitions? Directives? SelectionSet
+ *
+ * OperationType : one of query mutation
  */
 function parseOperationDefinition(parser) {
   var start = parser.token.start;
@@ -146,8 +148,11 @@ function parseOperationDefinition(parser) {
       loc: loc(parser, start)
     };
   }
-  var operation = parseOperationType(parser);
-  var name = void 0;
+  var operationToken = expect(parser, _lexer.TokenKind.NAME);
+  var operation = operationToken.value === 'mutation' ? 'mutation' : operationToken.value === 'subscription' ? 'subscription' : operationToken.value === 'query' ? 'query' : (function () {
+    throw unexpected(parser, operationToken);
+  })();
+  var name = undefined;
   if (peek(parser, _lexer.TokenKind.NAME)) {
     name = parseName(parser);
   }
@@ -160,24 +165,6 @@ function parseOperationDefinition(parser) {
     selectionSet: parseSelectionSet(parser),
     loc: loc(parser, start)
   };
-}
-
-/**
- * OperationType : one of query mutation subscription
- */
-function parseOperationType(parser) {
-  var operationToken = expect(parser, _lexer.TokenKind.NAME);
-  switch (operationToken.value) {
-    case 'query':
-      return 'query';
-    case 'mutation':
-      return 'mutation';
-    // Note: subscription is an experimental non-spec addition.
-    case 'subscription':
-      return 'subscription';
-  }
-
-  throw unexpected(parser, operationToken);
 }
 
 /**
@@ -245,8 +232,8 @@ function parseField(parser) {
   var start = parser.token.start;
 
   var nameOrAlias = parseName(parser);
-  var alias = void 0;
-  var name = void 0;
+  var alias = undefined;
+  var name = undefined;
   if (skip(parser, _lexer.TokenKind.COLON)) {
     alias = nameOrAlias;
     name = parseName(parser);
@@ -512,7 +499,7 @@ function parseDirective(parser) {
  */
 function parseType(parser) {
   var start = parser.token.start;
-  var type = void 0;
+  var type = undefined;
   if (skip(parser, _lexer.TokenKind.BRACKET_L)) {
     type = parseType(parser);
     expect(parser, _lexer.TokenKind.BRACKET_R);
@@ -549,87 +536,34 @@ function parseNamedType(parser) {
 // Implements the parsing rules in the Type Definition section.
 
 /**
- * TypeSystemDefinition :
- *   - TypeDefinition
- *   - TypeExtensionDefinition
- *   - DirectiveDefinition
- *
  * TypeDefinition :
- *   - ScalarTypeDefinition
  *   - ObjectTypeDefinition
  *   - InterfaceTypeDefinition
  *   - UnionTypeDefinition
+ *   - ScalarTypeDefinition
  *   - EnumTypeDefinition
  *   - InputObjectTypeDefinition
  */
-function parseTypeSystemDefinition(parser) {
-  if (peek(parser, _lexer.TokenKind.NAME)) {
-    switch (parser.token.value) {
-      case 'schema':
-        return parseSchemaDefinition(parser);
-      case 'scalar':
-        return parseScalarTypeDefinition(parser);
-      case 'type':
-        return parseObjectTypeDefinition(parser);
-      case 'interface':
-        return parseInterfaceTypeDefinition(parser);
-      case 'union':
-        return parseUnionTypeDefinition(parser);
-      case 'enum':
-        return parseEnumTypeDefinition(parser);
-      case 'input':
-        return parseInputObjectTypeDefinition(parser);
-      case 'extend':
-        return parseTypeExtensionDefinition(parser);
-      case 'directive':
-        return parseDirectiveDefinition(parser);
-    }
+function parseTypeDefinition(parser) {
+  if (!peek(parser, _lexer.TokenKind.NAME)) {
+    throw unexpected(parser);
   }
-
-  throw unexpected(parser);
-}
-
-/**
- * SchemaDefinition : schema { OperationTypeDefinition+ }
- *
- * OperationTypeDefinition : OperationType : NamedType
- */
-function parseSchemaDefinition(parser) {
-  var start = parser.token.start;
-  expectKeyword(parser, 'schema');
-  var operationTypes = many(parser, _lexer.TokenKind.BRACE_L, parseOperationTypeDefinition, _lexer.TokenKind.BRACE_R);
-  return {
-    kind: _kinds.SCHEMA_DEFINITION,
-    operationTypes: operationTypes,
-    loc: loc(parser, start)
-  };
-}
-
-function parseOperationTypeDefinition(parser) {
-  var start = parser.token.start;
-  var operation = parseOperationType(parser);
-  expect(parser, _lexer.TokenKind.COLON);
-  var type = parseNamedType(parser);
-  return {
-    kind: _kinds.OPERATION_TYPE_DEFINITION,
-    operation: operation,
-    type: type,
-    loc: loc(parser, start)
-  };
-}
-
-/**
- * ScalarTypeDefinition : scalar Name
- */
-function parseScalarTypeDefinition(parser) {
-  var start = parser.token.start;
-  expectKeyword(parser, 'scalar');
-  var name = parseName(parser);
-  return {
-    kind: _kinds.SCALAR_TYPE_DEFINITION,
-    name: name,
-    loc: loc(parser, start)
-  };
+  switch (parser.token.value) {
+    case 'type':
+      return parseObjectTypeDefinition(parser);
+    case 'interface':
+      return parseInterfaceTypeDefinition(parser);
+    case 'union':
+      return parseUnionTypeDefinition(parser);
+    case 'scalar':
+      return parseScalarTypeDefinition(parser);
+    case 'enum':
+      return parseEnumTypeDefinition(parser);
+    case 'input':
+      return parseInputObjectTypeDefinition(parser);
+    default:
+      throw unexpected(parser);
+  }
 }
 
 /**
@@ -760,6 +694,20 @@ function parseUnionMembers(parser) {
 }
 
 /**
+ * ScalarTypeDefinition : scalar Name
+ */
+function parseScalarTypeDefinition(parser) {
+  var start = parser.token.start;
+  expectKeyword(parser, 'scalar');
+  var name = parseName(parser);
+  return {
+    kind: _kinds.SCALAR_TYPE_DEFINITION,
+    name: name,
+    loc: loc(parser, start)
+  };
+}
+
+/**
  * EnumTypeDefinition : enum Name { EnumValueDefinition+ }
  */
 function parseEnumTypeDefinition(parser) {
@@ -818,40 +766,6 @@ function parseTypeExtensionDefinition(parser) {
     definition: definition,
     loc: loc(parser, start)
   };
-}
-
-/**
- * DirectiveDefinition :
- *   - directive @ Name ArgumentsDefinition? on DirectiveLocations
- */
-function parseDirectiveDefinition(parser) {
-  var start = parser.token.start;
-  expectKeyword(parser, 'directive');
-  expect(parser, _lexer.TokenKind.AT);
-  var name = parseName(parser);
-  var args = parseArgumentDefs(parser);
-  expectKeyword(parser, 'on');
-  var locations = parseDirectiveLocations(parser);
-  return {
-    kind: _kinds.DIRECTIVE_DEFINITION,
-    name: name,
-    arguments: args,
-    locations: locations,
-    loc: loc(parser, start)
-  };
-}
-
-/**
- * DirectiveLocations :
- *   - Name
- *   - DirectiveLocations | Name
- */
-function parseDirectiveLocations(parser) {
-  var locations = [];
-  do {
-    locations.push(parseName(parser));
-  } while (skip(parser, _lexer.TokenKind.PIPE));
-  return locations;
 }
 
 // Core parsing utility functions

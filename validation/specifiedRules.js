@@ -53,40 +53,56 @@ var _OverlappingFieldsCanBeMerged = require('./rules/OverlappingFieldsCanBeMerge
 
 var _UniqueInputFieldNames = require('./rules/UniqueInputFieldNames');
 
+var _index = require('./index');
+
 /**
  * This set includes all validation rules defined by the GraphQL spec.
  */
 
+// Spec Section: "Input Object Field Uniqueness"
+
+// Spec Section: "All Variable Usages Are Allowed"
+
+// Spec Section: "Argument Optionality"
+
+// Spec Section: "Argument Uniqueness"
+
+// Spec Section: "Directives Are Defined"
+
+// Spec Section: "All Variable Used Defined"
+
+// Spec Section: "Fragments must not form cycles"
+
+// Spec Section: "Fragments must be used"
+
+// Spec Section: "Fragment Name Uniqueness"
+
+// Spec Section: "Leaf Field Selections"
+
+// Spec Section: "Fragments on Composite Types"
+
+// Spec Section: "Lone Anonymous Operation"
+var specifiedRules = exports.specifiedRules = [_UniqueOperationNames.UniqueOperationNames, _LoneAnonymousOperation.LoneAnonymousOperation, _KnownTypeNames.KnownTypeNames, _FragmentsOnCompositeTypes.FragmentsOnCompositeTypes, _VariablesAreInputTypes.VariablesAreInputTypes, _ScalarLeafs.ScalarLeafs, _FieldsOnCorrectType.FieldsOnCorrectType, _UniqueFragmentNames.UniqueFragmentNames, _KnownFragmentNames.KnownFragmentNames, _NoUnusedFragments.NoUnusedFragments, _PossibleFragmentSpreads.PossibleFragmentSpreads, _NoFragmentCycles.NoFragmentCycles, _UniqueVariableNames.UniqueVariableNames, _NoUndefinedVariables.NoUndefinedVariables, _NoUnusedVariables.NoUnusedVariables, _KnownDirectives.KnownDirectives, _KnownArgumentNames.KnownArgumentNames, _UniqueArgumentNames.UniqueArgumentNames, _ArgumentsOfCorrectType.ArgumentsOfCorrectType, _ProvidedNonNullArguments.ProvidedNonNullArguments, _DefaultValuesOfCorrectType.DefaultValuesOfCorrectType, _VariablesInAllowedPosition.VariablesInAllowedPosition, _OverlappingFieldsCanBeMerged.OverlappingFieldsCanBeMerged, _UniqueInputFieldNames.UniqueInputFieldNames];
 
 // Spec Section: "Field Selection Merging"
 
-
 // Spec Section: "Variable Default Values Are Correctly Typed"
-
 
 // Spec Section: "Argument Values Type Correctness"
 
-
 // Spec Section: "Argument Names"
-
 
 // Spec Section: "All Variables Used"
 
-
 // Spec Section: "Variable Uniqueness"
-
 
 // Spec Section: "Fragment spread is possible"
 
-
 // Spec Section: "Fragment spread target defined"
-
 
 // Spec Section: "Field Selections on Objects, Interfaces, and Unions Types"
 
-
 // Spec Section: "Variables are Input Types"
-
 
 // Spec Section: "Fragment Spread Type Existence"
 
@@ -100,39 +116,3 @@ var _UniqueInputFieldNames = require('./rules/UniqueInputFieldNames');
  */
 
 // Spec Section: "Operation Name Uniqueness"
-var specifiedRules = exports.specifiedRules = [_UniqueOperationNames.UniqueOperationNames, _LoneAnonymousOperation.LoneAnonymousOperation, _KnownTypeNames.KnownTypeNames, _FragmentsOnCompositeTypes.FragmentsOnCompositeTypes, _VariablesAreInputTypes.VariablesAreInputTypes, _ScalarLeafs.ScalarLeafs, _FieldsOnCorrectType.FieldsOnCorrectType, _UniqueFragmentNames.UniqueFragmentNames, _KnownFragmentNames.KnownFragmentNames, _NoUnusedFragments.NoUnusedFragments, _PossibleFragmentSpreads.PossibleFragmentSpreads, _NoFragmentCycles.NoFragmentCycles, _UniqueVariableNames.UniqueVariableNames, _NoUndefinedVariables.NoUndefinedVariables, _NoUnusedVariables.NoUnusedVariables, _KnownDirectives.KnownDirectives, _KnownArgumentNames.KnownArgumentNames, _UniqueArgumentNames.UniqueArgumentNames, _ArgumentsOfCorrectType.ArgumentsOfCorrectType, _ProvidedNonNullArguments.ProvidedNonNullArguments, _DefaultValuesOfCorrectType.DefaultValuesOfCorrectType, _VariablesInAllowedPosition.VariablesInAllowedPosition, _OverlappingFieldsCanBeMerged.OverlappingFieldsCanBeMerged, _UniqueInputFieldNames.UniqueInputFieldNames];
-
-// Spec Section: "Input Object Field Uniqueness"
-
-
-// Spec Section: "All Variable Usages Are Allowed"
-
-
-// Spec Section: "Argument Optionality"
-
-
-// Spec Section: "Argument Uniqueness"
-
-
-// Spec Section: "Directives Are Defined"
-
-
-// Spec Section: "All Variable Used Defined"
-
-
-// Spec Section: "Fragments must not form cycles"
-
-
-// Spec Section: "Fragments must be used"
-
-
-// Spec Section: "Fragment Name Uniqueness"
-
-
-// Spec Section: "Leaf Field Selections"
-
-
-// Spec Section: "Fragments on Composite Types"
-
-
-// Spec Section: "Lone Anonymous Operation"

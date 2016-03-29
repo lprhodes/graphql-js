@@ -3,16 +3,9 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _stringify = require('babel-runtime/core-js/json/stringify');
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
 exports.print = print;
 
 var _visitor = require('./visitor');
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /**
  * Converts an AST into a string, using one set of reasonable
@@ -53,7 +46,6 @@ var printDocASTReducer = {
     // the query short form.
     return !name && !directives && !varDefs && op === 'query' ? selectionSet : join([op, join([name, varDefs]), directives, selectionSet], ' ');
   },
-
 
   VariableDefinition: function VariableDefinition(_ref) {
     var variable = _ref.variable;
@@ -117,11 +109,11 @@ var printDocASTReducer = {
   },
   StringValue: function StringValue(_ref10) {
     var value = _ref10.value;
-    return (0, _stringify2.default)(value);
+    return JSON.stringify(value);
   },
   BooleanValue: function BooleanValue(_ref11) {
     var value = _ref11.value;
-    return (0, _stringify2.default)(value);
+    return JSON.stringify(value);
   },
   EnumValue: function EnumValue(_ref12) {
     var value = _ref12.value;
@@ -164,84 +156,66 @@ var printDocASTReducer = {
     return type + '!';
   },
 
-  // Type System Definitions
+  // Type Definitions
 
-  SchemaDefinition: function SchemaDefinition(_ref20) {
-    var operationTypes = _ref20.operationTypes;
-    return 'schema ' + block(operationTypes);
-  },
-
-  OperationTypeDefinition: function OperationTypeDefinition(_ref21) {
-    var operation = _ref21.operation;
-    var type = _ref21.type;
-    return operation + ': ' + type;
-  },
-
-  ScalarTypeDefinition: function ScalarTypeDefinition(_ref22) {
-    var name = _ref22.name;
-    return 'scalar ' + name;
-  },
-
-  ObjectTypeDefinition: function ObjectTypeDefinition(_ref23) {
-    var name = _ref23.name;
-    var interfaces = _ref23.interfaces;
-    var fields = _ref23.fields;
+  ObjectTypeDefinition: function ObjectTypeDefinition(_ref20) {
+    var name = _ref20.name;
+    var interfaces = _ref20.interfaces;
+    var fields = _ref20.fields;
     return 'type ' + name + ' ' + wrap('implements ', join(interfaces, ', '), ' ') + block(fields);
   },
 
-  FieldDefinition: function FieldDefinition(_ref24) {
-    var name = _ref24.name;
-    var args = _ref24.arguments;
-    var type = _ref24.type;
+  FieldDefinition: function FieldDefinition(_ref21) {
+    var name = _ref21.name;
+    var args = _ref21.arguments;
+    var type = _ref21.type;
     return name + wrap('(', join(args, ', '), ')') + ': ' + type;
   },
 
-  InputValueDefinition: function InputValueDefinition(_ref25) {
-    var name = _ref25.name;
-    var type = _ref25.type;
-    var defaultValue = _ref25.defaultValue;
+  InputValueDefinition: function InputValueDefinition(_ref22) {
+    var name = _ref22.name;
+    var type = _ref22.type;
+    var defaultValue = _ref22.defaultValue;
     return name + ': ' + type + wrap(' = ', defaultValue);
   },
 
-  InterfaceTypeDefinition: function InterfaceTypeDefinition(_ref26) {
-    var name = _ref26.name;
-    var fields = _ref26.fields;
+  InterfaceTypeDefinition: function InterfaceTypeDefinition(_ref23) {
+    var name = _ref23.name;
+    var fields = _ref23.fields;
     return 'interface ' + name + ' ' + block(fields);
   },
 
-  UnionTypeDefinition: function UnionTypeDefinition(_ref27) {
-    var name = _ref27.name;
-    var types = _ref27.types;
+  UnionTypeDefinition: function UnionTypeDefinition(_ref24) {
+    var name = _ref24.name;
+    var types = _ref24.types;
     return 'union ' + name + ' = ' + join(types, ' | ');
   },
 
-  EnumTypeDefinition: function EnumTypeDefinition(_ref28) {
-    var name = _ref28.name;
-    var values = _ref28.values;
+  ScalarTypeDefinition: function ScalarTypeDefinition(_ref25) {
+    var name = _ref25.name;
+    return 'scalar ' + name;
+  },
+
+  EnumTypeDefinition: function EnumTypeDefinition(_ref26) {
+    var name = _ref26.name;
+    var values = _ref26.values;
     return 'enum ' + name + ' ' + block(values);
   },
 
-  EnumValueDefinition: function EnumValueDefinition(_ref29) {
-    var name = _ref29.name;
+  EnumValueDefinition: function EnumValueDefinition(_ref27) {
+    var name = _ref27.name;
     return name;
   },
 
-  InputObjectTypeDefinition: function InputObjectTypeDefinition(_ref30) {
-    var name = _ref30.name;
-    var fields = _ref30.fields;
+  InputObjectTypeDefinition: function InputObjectTypeDefinition(_ref28) {
+    var name = _ref28.name;
+    var fields = _ref28.fields;
     return 'input ' + name + ' ' + block(fields);
   },
 
-  TypeExtensionDefinition: function TypeExtensionDefinition(_ref31) {
-    var definition = _ref31.definition;
+  TypeExtensionDefinition: function TypeExtensionDefinition(_ref29) {
+    var definition = _ref29.definition;
     return 'extend ' + definition;
-  },
-
-  DirectiveDefinition: function DirectiveDefinition(_ref32) {
-    var name = _ref32.name;
-    var args = _ref32.arguments;
-    var locations = _ref32.locations;
-    return 'directive @' + name + wrap('(', join(args, ', '), ')') + ' on ' + join(locations, ' | ');
   }
 };
 

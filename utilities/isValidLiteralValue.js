@@ -3,26 +3,11 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
-
-var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _getIterator2 = require('babel-runtime/core-js/get-iterator');
-
-var _getIterator3 = _interopRequireDefault(_getIterator2);
-
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
 exports.isValidLiteralValue = isValidLiteralValue;
 
 var _printer = require('../language/printer');
+
+var _ast = require('../language/ast');
 
 var _kinds = require('../language/kinds');
 
@@ -42,14 +27,9 @@ var _isNullish2 = _interopRequireDefault(_isNullish);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-/**
- * Utility for validators which determines if a value literal AST is valid given
- * an input type.
- *
- * Note that this only validates literal values, variables are assumed to
- * provide values of the correct type.
- */
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
 /**
  *  Copyright (c) 2015, Facebook, Inc.
  *  All rights reserved.
@@ -59,6 +39,13 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
 
+/**
+ * Utility for validators which determines if a value literal AST is valid given
+ * an input type.
+ *
+ * Note that this only validates literal values, variables are assumed to
+ * provide values of the correct type.
+ */
 function isValidLiteralValue(type, valueAST) {
   // A value must be provided if the type is non-null.
   if (type instanceof _definition.GraphQLNonNull) {
@@ -83,7 +70,7 @@ function isValidLiteralValue(type, valueAST) {
 
   // Lists accept a non-list value as a list of one.
   if (type instanceof _definition.GraphQLList) {
-    var _ret = function () {
+    var _ret = (function () {
       var itemType = type.ofType;
       if (valueAST.kind === _kinds.LIST) {
         return {
@@ -98,9 +85,9 @@ function isValidLiteralValue(type, valueAST) {
       return {
         v: isValidLiteralValue(itemType, valueAST)
       };
-    }();
+    })();
 
-    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
   }
 
   // Input objects check each defined field and look for undefined fields.
@@ -119,7 +106,7 @@ function isValidLiteralValue(type, valueAST) {
     var _iteratorError = undefined;
 
     try {
-      for (var _iterator = (0, _getIterator3.default)(fieldASTs), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      for (var _iterator = fieldASTs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
         var providedFieldAST = _step.value;
 
         if (!fields[providedFieldAST.name.value]) {
@@ -155,12 +142,12 @@ function isValidLiteralValue(type, valueAST) {
         var fieldName = _step2.value;
 
         var result = isValidLiteralValue(fields[fieldName].type, fieldASTMap[fieldName] && fieldASTMap[fieldName].value);
-        errors.push.apply(errors, (0, _toConsumableArray3.default)(result.map(function (error) {
+        errors.push.apply(errors, _toConsumableArray(result.map(function (error) {
           return 'In field "' + fieldName + '": ' + error;
         })));
       };
 
-      for (var _iterator2 = (0, _getIterator3.default)((0, _keys2.default)(fields)), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+      for (var _iterator2 = Object.keys(fields)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
         _loop();
       }
     } catch (err) {

@@ -354,9 +354,3 @@ Object.defineProperty(exports, 'doTypesOverlap', {
     return _utilities.doTypesOverlap;
   }
 });
-Object.defineProperty(exports, 'assertValidName', {
-  enumerable: true,
-  get: function get() {
-    return _utilities.assertValidName;
-  }
-});

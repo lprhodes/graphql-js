@@ -3,17 +3,12 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _create = require('babel-runtime/core-js/object/create');
-
-var _create2 = _interopRequireDefault(_create);
-
 exports.duplicateArgMessage = duplicateArgMessage;
 exports.UniqueArgumentNames = UniqueArgumentNames;
 
-var _error = require('../../error');
+var _index = require('../index');
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _error = require('../../error');
 
 /**
  *  Copyright (c) 2015, Facebook, Inc.
@@ -35,13 +30,13 @@ function duplicateArgMessage(argName) {
  * uniquely named.
  */
 function UniqueArgumentNames(context) {
-  var knownArgNames = (0, _create2.default)(null);
+  var knownArgNames = Object.create(null);
   return {
     Field: function Field() {
-      knownArgNames = (0, _create2.default)(null);
+      knownArgNames = Object.create(null);
     },
     Directive: function Directive() {
-      knownArgNames = (0, _create2.default)(null);
+      knownArgNames = Object.create(null);
     },
     Argument: function Argument(node) {
       var argName = node.name.value;
