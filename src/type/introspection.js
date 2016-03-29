@@ -22,6 +22,7 @@ import {
   GraphQLNonNull,
 } from './definition';
 import { GraphQLString, GraphQLBoolean } from './scalars';
+import { DirectiveLocation } from './directives';
 import type { GraphQLFieldDefinition } from './definition';
 
 
@@ -66,7 +67,7 @@ export const __Schema = new GraphQLObjectType({
   })
 });
 
-const __Directive = new GraphQLObjectType({
+export const __Directive = new GraphQLObjectType({
   name: '__Directive',
   description:
     'A Directive provides a way to describe alternate runtime execution and ' +
@@ -78,18 +79,80 @@ const __Directive = new GraphQLObjectType({
   fields: () => ({
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: GraphQLString },
+    locations: {
+      type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(
+        __DirectiveLocation
+      )))
+    },
     args: {
       type:
         new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(__InputValue))),
       resolve: directive => directive.args || []
     },
-    onOperation: { type: new GraphQLNonNull(GraphQLBoolean) },
-    onFragment: { type: new GraphQLNonNull(GraphQLBoolean) },
-    onField: { type: new GraphQLNonNull(GraphQLBoolean) },
+    // NOTE: the following three fields are deprecated and are no longer part
+    // of the GraphQL specification.
+    onOperation: {
+      deprecationReason: 'Use `locations`.',
+      type: new GraphQLNonNull(GraphQLBoolean),
+      resolve: d =>
+        d.locations.indexOf(DirectiveLocation.QUERY) !== -1 ||
+        d.locations.indexOf(DirectiveLocation.MUTATION) !== -1 ||
+        d.locations.indexOf(DirectiveLocation.SUBSCRIPTION) !== -1
+    },
+    onFragment: {
+      deprecationReason: 'Use `locations`.',
+      type: new GraphQLNonNull(GraphQLBoolean),
+      resolve: d =>
+        d.locations.indexOf(DirectiveLocation.FRAGMENT_SPREAD) !== -1 ||
+        d.locations.indexOf(DirectiveLocation.INLINE_FRAGMENT) !== -1 ||
+        d.locations.indexOf(DirectiveLocation.FRAGMENT_DEFINITION) !== -1
+    },
+    onField: {
+      deprecationReason: 'Use `locations`.',
+      type: new GraphQLNonNull(GraphQLBoolean),
+      resolve: d => d.locations.indexOf(DirectiveLocation.FIELD) !== -1
+    },
   }),
 });
 
-const __Type = new GraphQLObjectType({
+export const __DirectiveLocation = new GraphQLEnumType({
+  name: '__DirectiveLocation',
+  description:
+    'A Directive can be adjacent to many parts of the GraphQL language, a ' +
+    '__DirectiveLocation describes one such possible adjacencies.',
+  values: {
+    QUERY: {
+      value: DirectiveLocation.QUERY,
+      description: 'Location adjacent to a query operation.'
+    },
+    MUTATION: {
+      value: DirectiveLocation.MUTATION,
+      description: 'Location adjacent to a mutation operation.'
+    },
+    SUBSCRIPTION: {
+      value: DirectiveLocation.SUBSCRIPTION,
+      description: 'Location adjacent to a subscription operation.'
+    },
+    FIELD: {
+      value: DirectiveLocation.FIELD,
+      description: 'Location adjacent to a field.'
+    },
+    FRAGMENT_DEFINITION: {
+      value: DirectiveLocation.FRAGMENT_DEFINITION,
+      description: 'Location adjacent to a fragment definition.'
+    },
+    FRAGMENT_SPREAD: {
+      value: DirectiveLocation.FRAGMENT_SPREAD,
+      description: 'Location adjacent to a fragment spread.'
+    },
+    INLINE_FRAGMENT: {
+      value: DirectiveLocation.INLINE_FRAGMENT,
+      description: 'Location adjacent to an inline fragment.'
+    },
+  }
+});
+
+export const __Type = new GraphQLObjectType({
   name: '__Type',
   description:
     'The fundamental unit of any GraphQL Schema is the type. There are ' +
@@ -155,10 +218,10 @@ const __Type = new GraphQLObjectType({
     },
     possibleTypes: {
       type: new GraphQLList(new GraphQLNonNull(__Type)),
-      resolve(type) {
+      resolve(type, args, context, { schema }) {
         if (type instanceof GraphQLInterfaceType ||
             type instanceof GraphQLUnionType) {
-          return type.getPossibleTypes();
+          return schema.getPossibleTypes(type);
         }
       }
     },
@@ -190,7 +253,7 @@ const __Type = new GraphQLObjectType({
   })
 });
 
-const __Field = new GraphQLObjectType({
+export const __Field = new GraphQLObjectType({
   name: '__Field',
   description:
     'Object and Interface types are described by a list of Fields, each of ' +
@@ -214,7 +277,7 @@ const __Field = new GraphQLObjectType({
   })
 });
 
-const __InputValue = new GraphQLObjectType({
+export const __InputValue = new GraphQLObjectType({
   name: '__InputValue',
   description:
     'Arguments provided to Fields or Directives and the input fields of an ' +
@@ -236,7 +299,7 @@ const __InputValue = new GraphQLObjectType({
   })
 });
 
-const __EnumValue = new GraphQLObjectType({
+export const __EnumValue = new GraphQLObjectType({
   name: '__EnumValue',
   description:
     'One possible value for a given Enum. Enum values are unique values, not ' +
@@ -266,7 +329,7 @@ export const TypeKind = {
   NON_NULL: 'NON_NULL',
 };
 
-const __TypeKind = new GraphQLEnumType({
+export const __TypeKind = new GraphQLEnumType({
   name: '__TypeKind',
   description: 'An enum describing what kind of type a given `__Type` is.',
   values: {
@@ -322,7 +385,7 @@ export const SchemaMetaFieldDef: GraphQLFieldDefinition = {
   type: new GraphQLNonNull(__Schema),
   description: 'Access the current type schema of this server.',
   args: [],
-  resolve: (source, args, { schema }) => schema
+  resolve: (source, args, context, { schema }) => schema
 };
 
 export const TypeMetaFieldDef: GraphQLFieldDefinition = {
@@ -332,7 +395,7 @@ export const TypeMetaFieldDef: GraphQLFieldDefinition = {
   args: [
     { name: 'name', type: new GraphQLNonNull(GraphQLString) }
   ],
-  resolve: (source, { name }: { name: string }, { schema }) =>
+  resolve: (source, { name }: { name: string }, context, { schema }) =>
     schema.getType(name)
 };
 
@@ -341,5 +404,5 @@ export const TypeNameMetaFieldDef: GraphQLFieldDefinition = {
   type: new GraphQLNonNull(GraphQLString),
   description: 'The name of the current Object type at runtime.',
   args: [],
-  resolve: (source, args, { parentType }) => parentType.name
+  resolve: (source, args, context, { parentType }) => parentType.name
 };

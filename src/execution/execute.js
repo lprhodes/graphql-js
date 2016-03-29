@@ -21,12 +21,16 @@ import {
   GraphQLEnumType,
   GraphQLList,
   GraphQLNonNull,
+  GraphQLInterfaceType,
+  GraphQLUnionType,
   isAbstractType
 } from '../type/definition';
 import type {
   GraphQLType,
+  GraphQLLeafType,
   GraphQLAbstractType,
   GraphQLFieldDefinition,
+  GraphQLFieldResolveFn,
   GraphQLResolveInfo,
 } from '../type/definition';
 import { GraphQLSchema } from '../type/schema';
@@ -80,6 +84,7 @@ type ExecutionContext = {
   schema: GraphQLSchema;
   fragments: {[key: string]: FragmentDefinition};
   rootValue: mixed;
+  contextValue: mixed;
   operation: OperationDefinition;
   variableValues: {[key: string]: mixed};
   errors: Array<GraphQLError>;
@@ -107,6 +112,7 @@ export function execute(
   schema: GraphQLSchema,
   documentAST: Document,
   rootValue?: mixed,
+  contextValue?: mixed,
   variableValues?: ?{[key: string]: mixed},
   operationName?: ?string
 ): Promise<ExecutionResult> {
@@ -123,6 +129,7 @@ export function execute(
     schema,
     documentAST,
     rootValue,
+    contextValue,
     variableValues,
     operationName
   );
@@ -160,6 +167,7 @@ function buildExecutionContext(
   schema: GraphQLSchema,
   documentAST: Document,
   rootValue: mixed,
+  contextValue: mixed,
   rawVariableValues: ?{[key: string]: mixed},
   operationName: ?string
 ): ExecutionContext {
@@ -189,7 +197,7 @@ function buildExecutionContext(
     }
   });
   if (!operation) {
-    if (!operationName) {
+    if (operationName) {
       throw new GraphQLError(`Unknown operation named "${operationName}".`);
     } else {
       throw new GraphQLError('Must provide an operation.');
@@ -200,9 +208,16 @@ function buildExecutionContext(
     operation.variableDefinitions || [],
     rawVariableValues || {}
   );
-  const exeContext: ExecutionContext =
-    { schema, fragments, rootValue, operation, variableValues, errors };
-  return exeContext;
+
+  return {
+    schema,
+    fragments,
+    rootValue,
+    contextValue,
+    operation,
+    variableValues,
+    errors
+  };
 }
 
 /**
@@ -465,7 +480,8 @@ function doesFragmentConditionMatch(
     return true;
   }
   if (isAbstractType(conditionalType)) {
-    return ((conditionalType: any): GraphQLAbstractType).isPossibleType(type);
+    const abstractType = ((conditionalType: any): GraphQLAbstractType);
+    return exeContext.schema.isPossibleType(abstractType, type);
   }
   return false;
 }
@@ -529,7 +545,12 @@ function resolveField(
     exeContext.variableValues
   );
 
-  // The resolve function's optional third argument is a collection of
+  // The resolve function's optional third argument is a context value that
+  // is provided to every resolve function within an execution. It is commonly
+  // used to represent an authenticated user, or request-specific caches.
+  const context = exeContext.contextValue;
+
+  // The resolve function's optional fourth argument is a collection of
   // information about the current execution state.
   const info: GraphQLResolveInfo = {
     fieldName,
@@ -545,7 +566,7 @@ function resolveField(
 
   // Get the resolve function, regardless of if its result is normal
   // or abrupt (error).
-  const result = resolveOrError(resolveFn, source, args, info);
+  const result = resolveOrError(resolveFn, source, args, context, info);
 
   return completeValueCatchingError(
     exeContext,
@@ -558,18 +579,15 @@ function resolveField(
 
 // Isolates the "ReturnOrAbrupt" behavior to not de-opt the `resolveField`
 // function. Returns the result of resolveFn or the abrupt-return Error object.
-function resolveOrError<T>(
-  resolveFn: (
-    source: mixed,
-    args: { [key: string]: mixed },
-    info: GraphQLResolveInfo
-  ) => T,
+function resolveOrError(
+  resolveFn: GraphQLFieldResolveFn,
   source: mixed,
   args: { [key: string]: mixed },
+  context: mixed,
   info: GraphQLResolveInfo
-): Error | T {
+): Error | mixed {
   try {
-    return resolveFn(source, args, info);
+    return resolveFn(source, args, context, info);
   } catch (error) {
     // Sometimes a non-error is thrown, wrap it as an Error for a
     // consistent interface.
@@ -636,6 +654,9 @@ function completeValueCatchingError(
  * value of the type by calling the `serialize` method of GraphQL type
  * definition.
  *
+ * If the field is an abstract type, determine the runtime type of the value
+ * and then complete based on that type
+ *
  * Otherwise, the field type expects a sub-selection set, and will complete the
  * value by evaluating all sub-selections.
  */
@@ -687,71 +708,154 @@ function completeValue(
     return completed;
   }
 
-  // If result is null-like, return null.
+  // If result value is null-ish (null, undefined, or NaN) then return null.
   if (isNullish(result)) {
     return null;
   }
 
   // If field type is List, complete each item in the list with the inner type
   if (returnType instanceof GraphQLList) {
-    invariant(
-      Array.isArray(result),
-      `User Error: expected iterable, but did not find one for field ${
-        info.parentType}.${info.fieldName}.`
-    );
-
-    // This is specified as a simple map, however we're optimizing the path
-    // where the list contains no Promises by avoiding creating another Promise.
-    const itemType = returnType.ofType;
-    let containsPromise = false;
-    const completedResults = result.map(item => {
-      const completedItem =
-        completeValueCatchingError(exeContext, itemType, fieldASTs, info, item);
-      if (!containsPromise && isThenable(completedItem)) {
-        containsPromise = true;
-      }
-      return completedItem;
-    });
-
-    return containsPromise ? Promise.all(completedResults) : completedResults;
+    return completeListValue(exeContext, returnType, fieldASTs, info, result);
   }
 
-  // If field type is Scalar or Enum, serialize to a valid value, returning
-  // null if serialization is not possible.
+  // If field type is a leaf type, Scalar or Enum, serialize to a valid value,
+  // returning null if serialization is not possible.
   if (returnType instanceof GraphQLScalarType ||
       returnType instanceof GraphQLEnumType) {
-    invariant(returnType.serialize, 'Missing serialize method on type');
-    const serializedResult = returnType.serialize(result);
-    return isNullish(serializedResult) ? null : serializedResult;
+    return completeLeafValue(returnType, result);
   }
 
-  // Field type must be Object, Interface or Union and expect sub-selections.
-  let runtimeType: ?GraphQLObjectType;
+  // If field type is an abstract type, Interface or Union, determine the
+  // runtime Object type and complete for that type.
+  if (returnType instanceof GraphQLInterfaceType ||
+      returnType instanceof GraphQLUnionType) {
+    return completeAbstractValue(
+      exeContext,
+      returnType,
+      fieldASTs,
+      info,
+      result
+    );
+  }
 
+  // If field type is Object, execute and complete all sub-selections.
   if (returnType instanceof GraphQLObjectType) {
-    runtimeType = returnType;
-  } else if (isAbstractType(returnType)) {
-    const abstractType = ((returnType: any): GraphQLAbstractType);
-    runtimeType = abstractType.getObjectType(result, info);
-    if (runtimeType && !abstractType.isPossibleType(runtimeType)) {
-      throw new GraphQLError(
-        `Runtime Object type "${runtimeType}" is not a possible type ` +
-        `for "${abstractType}".`,
-        fieldASTs
-      );
-    }
+    return completeObjectValue(
+      exeContext,
+      returnType,
+      fieldASTs,
+      info,
+      result
+    );
   }
+
+  // Not reachable. All possible output types have been considered.
+  invariant(
+    false,
+    `Cannot complete value of unexpected type "${returnType}".`
+  );
+}
+
+/**
+ * Complete a list value by completing each item in the list with the
+ * inner type
+ */
+function completeListValue(
+  exeContext: ExecutionContext,
+  returnType: GraphQLList,
+  fieldASTs: Array<Field>,
+  info: GraphQLResolveInfo,
+  result: mixed
+): mixed {
+  invariant(
+    Array.isArray(result),
+    `User Error: expected iterable, but did not find one for field ${
+      info.parentType}.${info.fieldName}.`
+  );
+
+  // This is specified as a simple map, however we're optimizing the path
+  // where the list contains no Promises by avoiding creating another Promise.
+  const itemType = returnType.ofType;
+  let containsPromise = false;
+  const completedResults = result.map(item => {
+    const completedItem =
+      completeValueCatchingError(exeContext, itemType, fieldASTs, info, item);
+    if (!containsPromise && isThenable(completedItem)) {
+      containsPromise = true;
+    }
+    return completedItem;
+  });
+
+  return containsPromise ? Promise.all(completedResults) : completedResults;
+}
+
+/**
+ * Complete a Scalar or Enum by serializing to a valid value, returning
+ * null if serialization is not possible.
+ */
+function completeLeafValue(
+  returnType: GraphQLLeafType,
+  result: mixed
+): mixed {
+  invariant(returnType.serialize, 'Missing serialize method on type');
+  const serializedResult = returnType.serialize(result);
+  return isNullish(serializedResult) ? null : serializedResult;
+}
+
+/**
+ * Complete a value of an abstract type by determining the runtime object type
+ * of that value, then complete the value for that type.
+ */
+function completeAbstractValue(
+  exeContext: ExecutionContext,
+  returnType: GraphQLAbstractType,
+  fieldASTs: Array<Field>,
+  info: GraphQLResolveInfo,
+  result: mixed
+): mixed {
+  const runtimeType = returnType.resolveType ?
+    returnType.resolveType(result, exeContext.contextValue, info) :
+    defaultResolveTypeFn(result, exeContext.contextValue, info, returnType);
 
   if (!runtimeType) {
     return null;
   }
 
+  const schema = exeContext.schema;
+  if (runtimeType && !schema.isPossibleType(returnType, runtimeType)) {
+    throw new GraphQLError(
+      `Runtime Object type "${runtimeType}" is not a possible type ` +
+      `for "${returnType}".`,
+      fieldASTs
+    );
+  }
+
+  return completeObjectValue(
+    exeContext,
+    runtimeType,
+    fieldASTs,
+    info,
+    result
+  );
+}
+
+/**
+ * Complete an Object value by executing all sub-selections.
+ */
+function completeObjectValue(
+  exeContext: ExecutionContext,
+  returnType: GraphQLObjectType,
+  fieldASTs: Array<Field>,
+  info: GraphQLResolveInfo,
+  result: mixed
+): mixed {
   // If there is an isTypeOf predicate function, call it with the
   // current result. If isTypeOf returns false, then raise an error rather
   // than continuing execution.
-  if (runtimeType.isTypeOf && !runtimeType.isTypeOf(result, info)) {
+  if (returnType.isTypeOf &&
+      !returnType.isTypeOf(result, exeContext.contextValue, info)) {
     throw new GraphQLError(
-      `Expected value of type "${runtimeType}" but got: ${result}.`,
+      `Expected value of type "${returnType}" but got: ${result}.`,
       fieldASTs
     );
   }
@@ -764,7 +868,7 @@ function completeValue(
     if (selectionSet) {
       subFieldASTs = collectFields(
         exeContext,
-        runtimeType,
+        returnType,
         selectionSet,
         subFieldASTs,
         visitedFragmentNames
@@ -772,7 +876,27 @@ function completeValue(
     }
   }
 
-  return executeFields(exeContext, runtimeType, result, subFieldASTs);
+  return executeFields(exeContext, returnType, result, subFieldASTs);
+}
+
+/**
+ * If a resolveType function is not given, then a default resolve behavior is
+ * used which tests each possible type for the abstract type by calling
+ * isTypeOf for the object being coerced, returning the first type that matches.
+ */
+function defaultResolveTypeFn(
+  value: mixed,
+  context: mixed,
+  info: GraphQLResolveInfo,
+  abstractType: GraphQLAbstractType
+): ?GraphQLObjectType {
+  const possibleTypes = info.schema.getPossibleTypes(abstractType);
+  for (let i = 0; i < possibleTypes.length; i++) {
+    const type = possibleTypes[i];
+    if (type.isTypeOf && type.isTypeOf(value, context, info)) {
+      return type;
+    }
+  }
 }
 
 /**
@@ -781,11 +905,11 @@ function completeValue(
  * and returns it as the result, or if it's a function, returns the result
  * of calling that function.
  */
-function defaultResolveFn(source, args, { fieldName }) {
+function defaultResolveFn(source: any, args, context, { fieldName }) {
   // ensure source is a value for which property access is acceptable.
-  if (typeof source !== 'number' && typeof source !== 'string' && source) {
-    const property = (source: any)[fieldName];
-    return typeof property === 'function' ? property.call(source) : property;
+  if (typeof source === 'object' || typeof source === 'function') {
+    const property = source[fieldName];
+    return typeof property === 'function' ? source[fieldName]() : property;
   }
 }
 

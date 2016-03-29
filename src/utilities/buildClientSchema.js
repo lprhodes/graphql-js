@@ -29,6 +29,17 @@ import {
 } from '../type/definition';
 
 import {
+  __Schema,
+  __Directive,
+  __DirectiveLocation,
+  __Type,
+  __Field,
+  __InputValue,
+  __EnumValue,
+  __TypeKind,
+} from '../type/introspection';
+
+import {
   GraphQLInt,
   GraphQLFloat,
   GraphQLString,
@@ -36,7 +47,7 @@ import {
   GraphQLID
 } from '../type/scalars';
 
-import { GraphQLDirective } from '../type/directives';
+import { DirectiveLocation, GraphQLDirective } from '../type/directives';
 
 import { TypeKind } from '../type/introspection';
 
@@ -93,6 +104,14 @@ export function buildClientSchema(
     Float: GraphQLFloat,
     Boolean: GraphQLBoolean,
     ID: GraphQLID,
+    __Schema,
+    __Directive,
+    __DirectiveLocation,
+    __Type,
+    __Field,
+    __InputValue,
+    __EnumValue,
+    __TypeKind,
   };
 
   // Given a type reference in introspection, return the GraphQLType instance.
@@ -235,9 +254,7 @@ export function buildClientSchema(
       name: interfaceIntrospection.name,
       description: interfaceIntrospection.description,
       fields: () => buildFieldDefMap(interfaceIntrospection),
-      resolveType: () => {
-        throw new Error('Client Schema cannot be used for execution.');
-      }
+      resolveType: cannotExecuteClientSchema,
     });
   }
 
@@ -248,9 +265,7 @@ export function buildClientSchema(
       name: unionIntrospection.name,
       description: unionIntrospection.description,
       types: unionIntrospection.possibleTypes.map(getObjectType),
-      resolveType: () => {
-        throw new Error('Client Schema cannot be used for execution.');
-      }
+      resolveType: cannotExecuteClientSchema,
     });
   }
 
@@ -290,9 +305,7 @@ export function buildClientSchema(
         deprecationReason: fieldIntrospection.deprecationReason,
         type: getOutputType(fieldIntrospection.type),
         args: buildInputValueDefMap(fieldIntrospection.args),
-        resolve: () => {
-          throw new Error('Client Schema cannot be used for execution.');
-        },
+        resolve: cannotExecuteClientSchema,
       })
     );
   }
@@ -319,19 +332,36 @@ export function buildClientSchema(
   }
 
   function buildDirective(directiveIntrospection) {
+    // Support deprecated `on****` fields for building `locations`, as this
+    // is used by GraphiQL which may need to support outdated servers.
+    const locations = directiveIntrospection.locations ?
+      directiveIntrospection.locations.slice() :
+      [].concat(
+        !directiveIntrospection.onField ? [] : [
+          DirectiveLocation.FIELD,
+        ],
+        !directiveIntrospection.onOperation ? [] : [
+          DirectiveLocation.QUERY,
+          DirectiveLocation.MUTATION,
+          DirectiveLocation.SUBSCRIPTION,
+        ],
+        !directiveIntrospection.onFragment ? [] : [
+          DirectiveLocation.FRAGMENT_DEFINITION,
+          DirectiveLocation.FRAGMENT_SPREAD,
+          DirectiveLocation.INLINE_FRAGMENT,
+        ]
+      );
     return new GraphQLDirective({
       name: directiveIntrospection.name,
       description: directiveIntrospection.description,
-      args: directiveIntrospection.args.map(buildInputValue),
-      onOperation: directiveIntrospection.onOperation,
-      onFragment: directiveIntrospection.onFragment,
-      onField: directiveIntrospection.onField,
+      locations,
+      args: buildInputValueDefMap(directiveIntrospection.args),
     });
   }
 
   // Iterate through all types, getting the type definition for each, ensuring
   // that any type not directly referenced by a field will get created.
-  schemaIntrospection.types.forEach(
+  const types = schemaIntrospection.types.map(
     typeIntrospection => getNamedType(typeIntrospection.name)
   );
 
@@ -357,6 +387,11 @@ export function buildClientSchema(
     query: queryType,
     mutation: mutationType,
     subscription: subscriptionType,
+    types,
     directives,
   });
+}
+
+function cannotExecuteClientSchema() {
+  throw new Error('Client Schema cannot be used for execution.');
 }

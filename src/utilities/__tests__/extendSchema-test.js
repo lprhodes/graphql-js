@@ -20,6 +20,7 @@ import {
   GraphQLUnionType,
   GraphQLID,
   GraphQLString,
+  GraphQLEnumType,
   GraphQLNonNull,
   GraphQLList,
 } from '../../type';
@@ -45,7 +46,6 @@ const FooType = new GraphQLObjectType({
   })
 });
 
-/* eslint-disable no-unused-vars */
 const BarType = new GraphQLObjectType({
   name: 'Bar',
   interfaces: [ SomeInterfaceType ],
@@ -55,7 +55,6 @@ const BarType = new GraphQLObjectType({
     foo: { type: FooType },
   })
 });
-/* eslint-enable no-unused-vars */
 
 const BizType = new GraphQLObjectType({
   name: 'Biz',
@@ -70,18 +69,28 @@ const SomeUnionType = new GraphQLUnionType({
   types: [ FooType, BizType ],
 });
 
+const SomeEnumType = new GraphQLEnumType({
+  name: 'SomeEnum',
+  values: {
+    ONE: { value: 1 },
+    TWO: { value: 2 },
+  }
+});
+
 const testSchema = new GraphQLSchema({
   query: new GraphQLObjectType({
     name: 'Query',
     fields: () => ({
       foo: { type: FooType },
       someUnion: { type: SomeUnionType },
+      someEnum: { type: SomeEnumType },
       someInterface: {
         args: { id: { type: new GraphQLNonNull(GraphQLID) } },
         type: SomeInterfaceType
       },
     })
-  })
+  }),
+  types: [ FooType, BarType ]
 });
 
 describe('extendSchema', () => {
@@ -133,7 +142,11 @@ describe('extendSchema', () => {
     expect(extendedSchema).to.not.equal(testSchema);
     expect(printSchema(testSchema)).to.equal(originalPrint);
     expect(printSchema(extendedSchema)).to.equal(
-`type Bar implements SomeInterface {
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
   name: String
   some: SomeInterface
   foo: Foo
@@ -153,7 +166,13 @@ type Foo implements SomeInterface {
 type Query {
   foo: Foo
   someUnion: SomeUnion
+  someEnum: SomeEnum
   someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
 }
 
 interface SomeInterface {
@@ -162,6 +181,62 @@ interface SomeInterface {
 }
 
 union SomeUnion = Foo | Biz
+`);
+  });
+
+  it('extends objects by adding new unused types', () => {
+    const ast = parse(`
+      type Unused {
+        someField: String
+      }
+    `);
+    const originalPrint = printSchema(testSchema);
+    const extendedSchema = extendSchema(testSchema, ast);
+    expect(extendedSchema).to.not.equal(testSchema);
+    expect(printSchema(testSchema)).to.equal(originalPrint);
+    expect(printSchema(extendedSchema)).to.equal(
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
+  name: String
+  some: SomeInterface
+  foo: Foo
+}
+
+type Biz {
+  fizz: String
+}
+
+type Foo implements SomeInterface {
+  name: String
+  some: SomeInterface
+  tree: [Foo]!
+}
+
+type Query {
+  foo: Foo
+  someUnion: SomeUnion
+  someEnum: SomeEnum
+  someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
+}
+
+interface SomeInterface {
+  name: String
+  some: SomeInterface
+}
+
+union SomeUnion = Foo | Biz
+
+type Unused {
+  someField: String
+}
 `);
   });
 
@@ -182,7 +257,11 @@ union SomeUnion = Foo | Biz
     expect(extendedSchema).to.not.equal(testSchema);
     expect(printSchema(testSchema)).to.equal(originalPrint);
     expect(printSchema(extendedSchema)).to.equal(
-`type Bar implements SomeInterface {
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
   name: String
   some: SomeInterface
   foo: Foo
@@ -208,7 +287,66 @@ input NewInputObj {
 type Query {
   foo: Foo
   someUnion: SomeUnion
+  someEnum: SomeEnum
   someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
+}
+
+interface SomeInterface {
+  name: String
+  some: SomeInterface
+}
+
+union SomeUnion = Foo | Biz
+`);
+  });
+
+  it('extends objects by adding new fields with existing types', () => {
+    const ast = parse(`
+      extend type Foo {
+        newField(arg1: SomeEnum!): SomeEnum
+      }
+    `);
+    const originalPrint = printSchema(testSchema);
+    const extendedSchema = extendSchema(testSchema, ast);
+    expect(extendedSchema).to.not.equal(testSchema);
+    expect(printSchema(testSchema)).to.equal(originalPrint);
+    expect(printSchema(extendedSchema)).to.equal(
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
+  name: String
+  some: SomeInterface
+  foo: Foo
+}
+
+type Biz {
+  fizz: String
+}
+
+type Foo implements SomeInterface {
+  name: String
+  some: SomeInterface
+  tree: [Foo]!
+  newField(arg1: SomeEnum!): SomeEnum
+}
+
+type Query {
+  foo: Foo
+  someUnion: SomeUnion
+  someEnum: SomeEnum
+  someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
 }
 
 interface SomeInterface {
@@ -232,7 +370,11 @@ union SomeUnion = Foo | Biz
     expect(extendedSchema).to.not.equal(testSchema);
     expect(printSchema(testSchema)).to.equal(originalPrint);
     expect(printSchema(extendedSchema)).to.equal(
-`type Bar implements SomeInterface {
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
   name: String
   some: SomeInterface
   foo: Foo
@@ -253,7 +395,13 @@ type Foo implements SomeInterface {
 type Query {
   foo: Foo
   someUnion: SomeUnion
+  someEnum: SomeEnum
   someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
 }
 
 interface SomeInterface {
@@ -302,7 +450,11 @@ union SomeUnion = Foo | Biz
     expect(extendedSchema).to.not.equal(testSchema);
     expect(printSchema(testSchema)).to.equal(originalPrint);
     expect(printSchema(extendedSchema)).to.equal(
-`type Bar implements SomeInterface {
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
   name: String
   some: SomeInterface
   foo: Foo
@@ -348,7 +500,13 @@ union NewUnion = NewObject | NewOtherObject
 type Query {
   foo: Foo
   someUnion: SomeUnion
+  someEnum: SomeEnum
   someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
 }
 
 interface SomeInterface {
@@ -375,7 +533,11 @@ union SomeUnion = Foo | Biz
     expect(extendedSchema).to.not.equal(testSchema);
     expect(printSchema(testSchema)).to.equal(originalPrint);
     expect(printSchema(extendedSchema)).to.equal(
-`type Bar implements SomeInterface {
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
   name: String
   some: SomeInterface
   foo: Foo
@@ -399,7 +561,13 @@ interface NewInterface {
 type Query {
   foo: Foo
   someUnion: SomeUnion
+  someEnum: SomeEnum
   someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
 }
 
 interface SomeInterface {
@@ -437,7 +605,11 @@ union SomeUnion = Foo | Biz
     expect(extendedSchema).to.not.equal(testSchema);
     expect(printSchema(testSchema)).to.equal(originalPrint);
     expect(printSchema(extendedSchema)).to.equal(
-`type Bar implements SomeInterface {
+`schema {
+  query: Query
+}
+
+type Bar implements SomeInterface {
   name: String
   some: SomeInterface
   foo: Foo
@@ -465,7 +637,13 @@ interface NewInterface {
 type Query {
   foo: Foo
   someUnion: SomeUnion
+  someEnum: SomeEnum
   someInterface(id: ID!): SomeInterface
+}
+
+enum SomeEnum {
+  ONE
+  TWO
 }
 
 interface SomeInterface {
@@ -517,7 +695,13 @@ union SomeUnion = Foo | Biz
     expect(extendedSchema).to.not.equal(mutationSchema);
     expect(printSchema(mutationSchema)).to.equal(originalPrint);
     expect(printSchema(extendedSchema)).to.equal(
-`type Mutation {
+`schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type Mutation {
   mutationField: String
   newMutationField: Int
 }

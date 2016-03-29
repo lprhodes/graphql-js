@@ -8,10 +8,27 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  */
 
-import { GraphQLNonNull } from './definition';
-import type { GraphQLArgument } from './definition';
+import { isInputType, GraphQLNonNull } from './definition';
+import type {
+  GraphQLFieldConfigArgumentMap,
+  GraphQLArgument
+} from './definition';
 import { GraphQLBoolean } from './scalars';
+import invariant from '../jsutils/invariant';
+import { assertValidName } from '../utilities/assertValidName';
 
+
+export const DirectiveLocation = {
+  QUERY: 'QUERY',
+  MUTATION: 'MUTATION',
+  SUBSCRIPTION: 'SUBSCRIPTION',
+  FIELD: 'FIELD',
+  FRAGMENT_DEFINITION: 'FRAGMENT_DEFINITION',
+  FRAGMENT_SPREAD: 'FRAGMENT_SPREAD',
+  INLINE_FRAGMENT: 'INLINE_FRAGMENT',
+};
+
+export type DirectiveLocationEnum = $Keys<typeof DirectiveLocation>; // eslint-disable-line
 
 /**
  * Directives are used by the GraphQL runtime as a way of modifying execution
@@ -20,28 +37,52 @@ import { GraphQLBoolean } from './scalars';
 export class GraphQLDirective {
   name: string;
   description: ?string;
+  locations: Array<DirectiveLocationEnum>;
   args: Array<GraphQLArgument>;
-  onOperation: boolean;
-  onFragment: boolean;
-  onField: boolean;
 
   constructor(config: GraphQLDirectiveConfig) {
+    invariant(config.name, 'Directive must be named.');
+    assertValidName(config.name);
+    invariant(
+      Array.isArray(config.locations),
+      'Must provide locations for directive.'
+    );
     this.name = config.name;
     this.description = config.description;
-    this.args = config.args || [];
-    this.onOperation = Boolean(config.onOperation);
-    this.onFragment = Boolean(config.onFragment);
-    this.onField = Boolean(config.onField);
+    this.locations = config.locations;
+
+    const args = config.args;
+    if (!args) {
+      this.args = [];
+    } else {
+      invariant(
+        !Array.isArray(args),
+        `@${config.name} args must be an object with argument names as keys.`
+      );
+      this.args = Object.keys(args).map(argName => {
+        assertValidName(argName);
+        const arg = args[argName];
+        invariant(
+          isInputType(arg.type),
+          `@${config.name}(${argName}:) argument type must be ` +
+          `Input Type but got: ${arg.type}.`
+        );
+        return {
+          name: argName,
+          description: arg.description === undefined ? null : arg.description,
+          type: arg.type,
+          defaultValue: arg.defaultValue === undefined ? null : arg.defaultValue
+        };
+      });
+    }
   }
 }
 
 type GraphQLDirectiveConfig = {
   name: string;
   description?: ?string;
-  args?: ?Array<GraphQLArgument>;
-  onOperation?: ?boolean;
-  onFragment?: ?boolean;
-  onField?: ?boolean;
+  locations: Array<DirectiveLocationEnum>;
+  args?: ?GraphQLFieldConfigArgumentMap;
 }
 
 /**
@@ -52,14 +93,17 @@ export const GraphQLIncludeDirective = new GraphQLDirective({
   description:
     'Directs the executor to include this field or fragment only when ' +
     'the `if` argument is true.',
-  args: [
-    { name: 'if',
-      type: new GraphQLNonNull(GraphQLBoolean),
-      description: 'Included when true.' }
+  locations: [
+    DirectiveLocation.FIELD,
+    DirectiveLocation.FRAGMENT_SPREAD,
+    DirectiveLocation.INLINE_FRAGMENT,
   ],
-  onOperation: false,
-  onFragment: true,
-  onField: true
+  args: {
+    if: {
+      type: new GraphQLNonNull(GraphQLBoolean),
+      description: 'Included when true.'
+    }
+  },
 });
 
 /**
@@ -70,12 +114,15 @@ export const GraphQLSkipDirective = new GraphQLDirective({
   description:
     'Directs the executor to skip this field or fragment when the `if` ' +
     'argument is true.',
-  args: [
-    { name: 'if',
-      type: new GraphQLNonNull(GraphQLBoolean),
-      description: 'Skipped when true.' }
+  locations: [
+    DirectiveLocation.FIELD,
+    DirectiveLocation.FRAGMENT_SPREAD,
+    DirectiveLocation.INLINE_FRAGMENT,
   ],
-  onOperation: false,
-  onFragment: true,
-  onField: true
+  args: {
+    if: {
+      type: new GraphQLNonNull(GraphQLBoolean),
+      description: 'Skipped when true.'
+    }
+  },
 });

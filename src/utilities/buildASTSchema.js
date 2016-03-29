@@ -19,34 +19,39 @@ import {
 } from '../language/kinds';
 
 import {
+  DOCUMENT,
+  SCHEMA_DEFINITION,
+  SCALAR_TYPE_DEFINITION,
   OBJECT_TYPE_DEFINITION,
   INTERFACE_TYPE_DEFINITION,
   ENUM_TYPE_DEFINITION,
   UNION_TYPE_DEFINITION,
-  SCALAR_TYPE_DEFINITION,
   INPUT_OBJECT_TYPE_DEFINITION,
+  DIRECTIVE_DEFINITION,
 } from '../language/kinds';
 
 import type {
   Document,
   Type,
   NamedType,
+  SchemaDefinition,
   TypeDefinition,
+  ScalarTypeDefinition,
   ObjectTypeDefinition,
   InputValueDefinition,
   InterfaceTypeDefinition,
   UnionTypeDefinition,
-  ScalarTypeDefinition,
   EnumTypeDefinition,
   InputObjectTypeDefinition,
+  DirectiveDefinition,
 } from '../language/ast';
 
 import {
   GraphQLSchema,
+  GraphQLScalarType,
   GraphQLObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
-  GraphQLScalarType,
   GraphQLEnumType,
   GraphQLInputObjectType,
   GraphQLString,
@@ -57,6 +62,19 @@ import {
   GraphQLList,
   GraphQLNonNull,
 } from '../type';
+
+import { GraphQLDirective } from '../type/directives';
+
+import {
+  __Schema,
+  __Directive,
+  __DirectiveLocation,
+  __Type,
+  __Field,
+  __InputValue,
+  __EnumValue,
+  __TypeKind,
+} from '../type/introspection';
 
 import type {
   GraphQLType,
@@ -100,32 +118,58 @@ function getNamedTypeAST(typeAST: Type): NamedType {
  * they are not particularly useful for non-introspection queries
  * since they have no resolve methods.
  */
-export function buildASTSchema(
-  ast: Document,
-  queryTypeName: string,
-  mutationTypeName: ?string,
-  subscriptionTypeName: ?string
-): GraphQLSchema {
-  if (!ast) {
-    throw new Error('must pass in ast');
+export function buildASTSchema(ast: Document): GraphQLSchema {
+  if (!ast || ast.kind !== DOCUMENT) {
+    throw new Error('Must provide a document ast.');
   }
 
-  if (!queryTypeName) {
-    throw new Error('must pass in query type');
-  }
+  let schemaDef: ?SchemaDefinition;
 
   const typeDefs: Array<TypeDefinition> = [];
+  const directiveDefs: Array<DirectiveDefinition> = [];
   for (let i = 0; i < ast.definitions.length; i++) {
     const d = ast.definitions[i];
     switch (d.kind) {
+      case SCHEMA_DEFINITION:
+        if (schemaDef) {
+          throw new Error('Must provide only one schema definition.');
+        }
+        schemaDef = d;
+        break;
+      case SCALAR_TYPE_DEFINITION:
       case OBJECT_TYPE_DEFINITION:
       case INTERFACE_TYPE_DEFINITION:
       case ENUM_TYPE_DEFINITION:
       case UNION_TYPE_DEFINITION:
-      case SCALAR_TYPE_DEFINITION:
       case INPUT_OBJECT_TYPE_DEFINITION:
         typeDefs.push(d);
+        break;
+      case DIRECTIVE_DEFINITION:
+        directiveDefs.push(d);
+        break;
     }
+  }
+
+  if (!schemaDef) {
+    throw new Error('Must provide a schema definition.');
+  }
+
+  let queryTypeName;
+  let mutationTypeName;
+  let subscriptionTypeName;
+  schemaDef.operationTypes.forEach(operationType => {
+    const typeName = operationType.type.name.value;
+    if (operationType.operation === 'query') {
+      queryTypeName = typeName;
+    } else if (operationType.operation === 'mutation') {
+      mutationTypeName = typeName;
+    } else if (operationType.operation === 'subscription') {
+      subscriptionTypeName = typeName;
+    }
+  });
+
+  if (!queryTypeName) {
+    throw new Error('Must provide schema definition with query type.');
   }
 
   const astMap: {[name: string]: TypeDefinition} =
@@ -133,20 +177,20 @@ export function buildASTSchema(
 
   if (!astMap[queryTypeName]) {
     throw new Error(
-      `Specified query type ${queryTypeName} not found in document.`
+      `Specified query type "${queryTypeName}" not found in document.`
     );
   }
 
   if (mutationTypeName && !astMap[mutationTypeName]) {
     throw new Error(
-      `Specified mutation type ${mutationTypeName} not found in document.`
+      `Specified mutation type "${mutationTypeName}" not found in document.`
     );
   }
 
   if (subscriptionTypeName && !astMap[subscriptionTypeName]) {
     throw new Error(
-      `Specified subscription type ${
-        subscriptionTypeName} not found in document.`
+      `Specified subscription type "${
+        subscriptionTypeName}" not found in document.`
     );
   }
 
@@ -156,16 +200,36 @@ export function buildASTSchema(
     Float: GraphQLFloat,
     Boolean: GraphQLBoolean,
     ID: GraphQLID,
+    __Schema,
+    __Directive,
+    __DirectiveLocation,
+    __Type,
+    __Field,
+    __InputValue,
+    __EnumValue,
+    __TypeKind,
   };
 
-  typeDefs.forEach(def => typeDefNamed(def.name.value));
+  const types = typeDefs.map(def => typeDefNamed(def.name.value));
+
+  const directives = directiveDefs.map(getDirective);
 
   return new GraphQLSchema({
     query: getObjectType(astMap[queryTypeName]),
     mutation: mutationTypeName ? getObjectType(astMap[mutationTypeName]) : null,
     subscription:
       subscriptionTypeName ? getObjectType(astMap[subscriptionTypeName]) : null,
+    types,
+    directives,
   });
+
+  function getDirective(directiveAST: DirectiveDefinition): GraphQLDirective {
+    return new GraphQLDirective({
+      name: directiveAST.name.value,
+      locations: directiveAST.locations.map(node => node.value),
+      args: makeInputValues(directiveAST.arguments),
+    });
+  }
 
   function getObjectType(typeAST: TypeDefinition): GraphQLObjectType {
     const type = typeDefNamed(typeAST.name.value);
@@ -188,12 +252,12 @@ export function buildASTSchema(
     }
 
     if (!astMap[typeName]) {
-      throw new Error(`Type ${typeName} not found in document`);
+      throw new Error(`Type "${typeName}" not found in document.`);
     }
 
     const innerTypeDef = makeSchemaDef(astMap[typeName]);
     if (!innerTypeDef) {
-      throw new Error(`Nothing constructed for ${typeName}`);
+      throw new Error(`Nothing constructed for "${typeName}".`);
     }
     innerTypeMap[typeName] = innerTypeDef;
     return innerTypeDef;
@@ -217,7 +281,7 @@ export function buildASTSchema(
       case INPUT_OBJECT_TYPE_DEFINITION:
         return makeInputObjectDef(def);
       default:
-        throw new Error(`${def.kind} not supported`);
+        throw new Error(`Type kind "${def.kind}" not supported.`);
     }
   }
 

@@ -10,8 +10,8 @@
 
 import invariant from '../jsutils/invariant';
 import isNullish from '../jsutils/isNullish';
-import keyMap from '../jsutils/keyMap';
 import { ENUM } from '../language/kinds';
+import { assertValidName } from '../utilities/assertValidName';
 import type {
   OperationDefinition,
   Field,
@@ -301,7 +301,7 @@ export type GraphQLScalarTypeConfig<InternalType> = {
 export class GraphQLObjectType {
   name: string;
   description: ?string;
-  isTypeOf: ?(value: mixed, info?: GraphQLResolveInfo) => boolean;
+  isTypeOf: ?GraphQLIsTypeOfFn;
 
   _typeConfig: GraphQLObjectTypeConfig;
   _fields: GraphQLFieldDefinitionMap;
@@ -320,7 +320,6 @@ export class GraphQLObjectType {
     }
     this.isTypeOf = config.isTypeOf;
     this._typeConfig = config;
-    addImplementationToInterfaces(this);
   }
 
   getFields(): GraphQLFieldDefinitionMap {
@@ -443,23 +442,11 @@ function isPlainObj(obj) {
   return obj && typeof obj === 'object' && !Array.isArray(obj);
 }
 
-/**
- * Update the interfaces to know about this implementation.
- * This is an rare and unfortunate use of mutation in the type definition
- * implementations, but avoids an expensive "getPossibleTypes"
- * implementation for Interface types.
- */
-function addImplementationToInterfaces(impl) {
-  impl.getInterfaces().forEach(type => {
-    type._implementations.push(impl);
-  });
-}
-
 export type GraphQLObjectTypeConfig = {
   name: string;
   interfaces?: GraphQLInterfacesThunk | Array<GraphQLInterfaceType>;
   fields: GraphQLFieldConfigMapThunk | GraphQLFieldConfigMap;
-  isTypeOf?: (value: mixed, info?: GraphQLResolveInfo) => boolean;
+  isTypeOf?: GraphQLIsTypeOfFn;
   description?: ?string
 }
 
@@ -467,9 +454,22 @@ type GraphQLInterfacesThunk = () => Array<GraphQLInterfaceType>;
 
 type GraphQLFieldConfigMapThunk = () => GraphQLFieldConfigMap;
 
+export type GraphQLTypeResolveFn = (
+  value: mixed,
+  context: mixed,
+  info: GraphQLResolveInfo
+) => ?GraphQLObjectType
+
+export type GraphQLIsTypeOfFn = (
+  value: mixed,
+  context: mixed,
+  info: GraphQLResolveInfo
+) => boolean
+
 export type GraphQLFieldResolveFn = (
   source: mixed,
   args: {[argName: string]: mixed},
+  context: mixed,
   info: GraphQLResolveInfo
 ) => mixed
 
@@ -550,12 +550,10 @@ export type GraphQLFieldDefinitionMap = {
 export class GraphQLInterfaceType {
   name: string;
   description: ?string;
-  resolveType: ?(value: mixed, info?: GraphQLResolveInfo) => ?GraphQLObjectType;
+  resolveType: ?GraphQLTypeResolveFn;
 
   _typeConfig: GraphQLInterfaceTypeConfig;
   _fields: GraphQLFieldDefinitionMap;
-  _implementations: Array<GraphQLObjectType>;
-  _possibleTypes: { [typeName: string]: GraphQLObjectType };
 
   constructor(config: GraphQLInterfaceTypeConfig) {
     invariant(config.name, 'Type must be named.');
@@ -570,7 +568,6 @@ export class GraphQLInterfaceType {
     }
     this.resolveType = config.resolveType;
     this._typeConfig = config;
-    this._implementations = [];
   }
 
   getFields(): GraphQLFieldDefinitionMap {
@@ -578,38 +575,8 @@ export class GraphQLInterfaceType {
       (this._fields = defineFieldMap(this, this._typeConfig.fields));
   }
 
-  getPossibleTypes(): Array<GraphQLObjectType> {
-    return this._implementations;
-  }
-
-  isPossibleType(type: GraphQLObjectType): boolean {
-    const possibleTypes = this._possibleTypes || (this._possibleTypes =
-      keyMap(this.getPossibleTypes(), possibleType => possibleType.name)
-    );
-    return Boolean(possibleTypes[type.name]);
-  }
-
-  getObjectType(value: mixed, info: GraphQLResolveInfo): ?GraphQLObjectType {
-    const resolver = this.resolveType;
-    return resolver ? resolver(value, info) : getTypeOf(value, info, this);
-  }
-
   toString(): string {
     return this.name;
-  }
-}
-
-function getTypeOf(
-  value: mixed,
-  info: GraphQLResolveInfo,
-  abstractType: GraphQLAbstractType
-): ?GraphQLObjectType {
-  const possibleTypes = abstractType.getPossibleTypes();
-  for (let i = 0; i < possibleTypes.length; i++) {
-    const type = possibleTypes[i];
-    if (typeof type.isTypeOf === 'function' && type.isTypeOf(value, info)) {
-      return type;
-    }
   }
 }
 
@@ -621,7 +588,7 @@ export type GraphQLInterfaceTypeConfig = {
    * the default implementation will call `isTypeOf` on each implementing
    * Object type.
    */
-  resolveType?: (value: mixed, info?: GraphQLResolveInfo) => ?GraphQLObjectType,
+  resolveType?: GraphQLTypeResolveFn,
   description?: ?string
 };
 
@@ -653,7 +620,7 @@ export type GraphQLInterfaceTypeConfig = {
 export class GraphQLUnionType {
   name: string;
   description: ?string;
-  resolveType: ?(value: mixed, info?: GraphQLResolveInfo) => ?GraphQLObjectType;
+  resolveType: ?GraphQLTypeResolveFn;
 
   _typeConfig: GraphQLUnionTypeConfig;
   _types: Array<GraphQLObjectType>;
@@ -694,25 +661,8 @@ export class GraphQLUnionType {
     this._typeConfig = config;
   }
 
-  getPossibleTypes(): Array<GraphQLObjectType> {
+  getTypes(): Array<GraphQLObjectType> {
     return this._types;
-  }
-
-  isPossibleType(type: GraphQLObjectType): boolean {
-    let possibleTypeNames = this._possibleTypeNames;
-    if (!possibleTypeNames) {
-      this._possibleTypeNames = possibleTypeNames =
-        this.getPossibleTypes().reduce(
-          (map, possibleType) => ((map[possibleType.name] = true), map),
-          {}
-        );
-    }
-    return possibleTypeNames[type.name] === true;
-  }
-
-  getObjectType(value: mixed, info: GraphQLResolveInfo): ?GraphQLObjectType {
-    const resolver = this._typeConfig.resolveType;
-    return resolver ? resolver(value, info) : getTypeOf(value, info, this);
   }
 
   toString(): string {
@@ -728,7 +678,7 @@ export type GraphQLUnionTypeConfig = {
    * the default implementation will call `isTypeOf` on each implementing
    * Object type.
    */
-  resolveType?: (value: mixed, info?: GraphQLResolveInfo) => ?GraphQLObjectType;
+  resolveType?: GraphQLTypeResolveFn;
   description?: ?string;
 };
 
@@ -1060,14 +1010,4 @@ export class GraphQLNonNull<T: GraphQLNullableType> {
   toString(): string {
     return this.ofType.toString() + '!';
   }
-}
-
-const NAME_RX = /^[_a-zA-Z][_a-zA-Z0-9]*$/;
-
-// Helper to assert that provided names are valid.
-function assertValidName(name: string): void {
-  invariant(
-    NAME_RX.test(name),
-    `Names must match /^[_a-zA-Z][_a-zA-Z0-9]*$/ but "${name}" does not.`
-  );
 }
